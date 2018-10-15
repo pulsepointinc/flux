@@ -64,8 +64,43 @@ type FluxHelmReleaseSpec struct {
 }
 
 type FluxHelmReleaseStatus struct {
+	// ReleaseName is the name as either supplied or generated.
+	// +optional
+	ReleaseName string `json:"releaseName"`
+
+	// ReleaseStatus is the status as given by Helm for the release
+	// managed by this resource.
 	ReleaseStatus string `json:"releaseStatus"`
+
+	// Conditions contains observations of the resource's state, e.g.,
+	// has the chart which it refers to been fetched.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []FluxHelmReleaseCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
+
+type FluxHelmReleaseCondition struct {
+	Type   FluxHelmReleaseConditionType `json:"type"`
+	Status v1.ConditionStatus           `json:"status"`
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// +optional
+	Reason string `json:"reason,omitempty"`
+	// +optional
+	Message string `json:"message,omitempty"`
+}
+
+type FluxHelmReleaseConditionType string
+
+const (
+	// ChartFetched means the chart to which the FluxHelmRelease
+	// refers has been fetched successfully
+	FluxHelmReleaseChartFetched FluxHelmReleaseConditionType = "ChartFetched"
+	// Released means the chart release, as specified in this
+	// FluxHelmRelease, has been processed by Helm.
+	FluxHelmReleaseReleased FluxHelmReleaseConditionType = "Released"
+)
 
 // FluxHelmValues embeds chartutil.Values so we can implement deepcopy on map[string]interface{}
 // +k8s:deepcopy-gen=false
