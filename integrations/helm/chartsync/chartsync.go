@@ -39,6 +39,7 @@ package chartsync
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -64,11 +65,14 @@ import (
 
 const (
 	// condition change reasons
-	ReasonGitNotReady   = "GitRepoNotCloned"
-	ReasonInstallFailed = "HelmInstallFailed"
-	ReasonUpgradeFailed = "HelmUgradeFailed"
-	ReasonCloned        = "GitRepoCloned"
-	ReasonSuccess       = "HelmSuccess"
+	ReasonGitNotReady      = "GitRepoNotCloned"
+	ReasonDownloadFailed   = "RepoFetchFailed"
+	ReasonDownloaded       = "RepoChartInCache"
+	ReasonInstallFailed    = "HelmInstallFailed"
+	ReasonDependencyFailed = "UpdateDependencyFailed"
+	ReasonUpgradeFailed    = "HelmUgradeFailed"
+	ReasonCloned           = "GitRepoCloned"
+	ReasonSuccess          = "HelmSuccess"
 )
 
 type Polling struct {
@@ -80,6 +84,21 @@ type Clients struct {
 	IfClient   ifclientset.Clientset
 }
 
+type Config struct {
+	ChartCache string
+	LogDiffs   bool
+	UpdateDeps bool
+}
+
+func (c Config) WithDefaults() Config {
+	if c.ChartCache == "" {
+		c.ChartCache = "/tmp"
+	}
+	return c
+}
+
+// clone puts a local git clone together with its state (head
+// revision), so we can keep track of when it needs to be updated.
 type clone struct {
 	export *git.Export
 	head   string
@@ -91,7 +110,7 @@ type ChartChangeSync struct {
 	kubeClient kubernetes.Clientset
 	ifClient   ifclientset.Clientset
 	release    *release.Release
-	logDiffs   bool
+	config     Config
 
 	mirrors *git.Mirrors
 
@@ -99,14 +118,14 @@ type ChartChangeSync struct {
 	clones   map[string]clone
 }
 
-func New(logger log.Logger, polling Polling, clients Clients, release *release.Release, logReleaseDiffs bool) *ChartChangeSync {
+func New(logger log.Logger, polling Polling, clients Clients, release *release.Release, config Config) *ChartChangeSync {
 	return &ChartChangeSync{
 		logger:     logger,
 		Polling:    polling,
 		kubeClient: clients.KubeClient,
 		ifClient:   clients.IfClient,
 		release:    release,
-		logDiffs:   logReleaseDiffs,
+		config:     config.WithDefaults(),
 		mirrors:    git.NewMirrors(),
 		clones:     make(map[string]clone),
 	}
@@ -272,7 +291,7 @@ func (chs *ChartChangeSync) reconcileReleaseDef(fhr fluxv1beta1.FluxHelmRelease)
 
 	opts := release.InstallOptions{DryRun: false}
 
-	cloneDir := ""
+	chartPath := ""
 	if fhr.Spec.ChartSource.GitChartSource != nil {
 		chartSource := fhr.Spec.ChartSource.GitChartSource
 		// We need to hold the lock until after we're done releasing
@@ -302,11 +321,30 @@ func (chs *ChartChangeSync) reconcileReleaseDef(fhr fluxv1beta1.FluxHelmRelease)
 			return
 		}
 		chs.setCondition(fhr, fluxv1beta1.FluxHelmReleaseChartFetched, v1.ConditionTrue, ReasonCloned, "successfully cloned git repo")
-		cloneDir = chartClone.export.Dir()
+		chartPath = filepath.Join(chartClone.export.Dir(), chartSource.Path)
+
+		if chs.config.UpdateDeps {
+			if err := updateDependencies(chartPath); err != nil {
+				chs.setCondition(fhr, fluxv1beta1.FluxHelmReleaseReleased, v1.ConditionFalse, ReasonDependencyFailed, err.Error())
+				chs.logger.Log("warning", "Failed to update chart dependencies", "namespace", fhr.Namespace, "name", fhr.Name, "error", err)
+				return
+			}
+		}
+
+	} else if fhr.Spec.ChartSource.RepoChartSource != nil { // TODO(michael): make this dispatch more natural, or factor it out
+		chartSource := fhr.Spec.ChartSource.RepoChartSource
+		path, err := ensureChartFetched(chs.config.ChartCache, chartSource)
+		if err != nil {
+			chs.setCondition(fhr, fluxv1beta1.FluxHelmReleaseChartFetched, v1.ConditionFalse, ReasonDownloadFailed, "chart download failed: "+err.Error())
+			chs.logger.Log("info", "chart download failed", "releaseName", releaseName, "resource", fhr.ResourceID().String(), "err", err)
+			return
+		}
+		chs.setCondition(fhr, fluxv1beta1.FluxHelmReleaseChartFetched, v1.ConditionTrue, ReasonDownloaded, "chart fetched: "+filepath.Base(path))
+		chartPath = path
 	}
 
 	if rel == nil {
-		_, err := chs.release.Install(cloneDir, releaseName, fhr, release.InstallAction, opts, &chs.kubeClient)
+		_, err := chs.release.Install(chartPath, releaseName, fhr, release.InstallAction, opts, &chs.kubeClient)
 		if err != nil {
 			chs.setCondition(fhr, fluxv1beta1.FluxHelmReleaseReleased, v1.ConditionFalse, ReasonInstallFailed, err.Error())
 			chs.logger.Log("warning", "Failed to install chart", "namespace", fhr.Namespace, "name", fhr.Name, "error", err)
@@ -316,13 +354,13 @@ func (chs *ChartChangeSync) reconcileReleaseDef(fhr fluxv1beta1.FluxHelmRelease)
 		return
 	}
 
-	changed, err := chs.shouldUpgrade(cloneDir, rel, fhr)
+	changed, err := chs.shouldUpgrade(chartPath, rel, fhr)
 	if err != nil {
 		chs.logger.Log("warning", "Unable to determine if release has changed", "namespace", fhr.Namespace, "name", fhr.Name, "error", err)
 		return
 	}
 	if changed {
-		_, err := chs.release.Install(cloneDir, releaseName, fhr, release.UpgradeAction, opts, &chs.kubeClient)
+		_, err := chs.release.Install(chartPath, releaseName, fhr, release.UpgradeAction, opts, &chs.kubeClient)
 		if err != nil {
 			chs.setCondition(fhr, fluxv1beta1.FluxHelmReleaseReleased, v1.ConditionFalse, ReasonUpgradeFailed, err.Error())
 			chs.logger.Log("warning", "Failed to upgrade chart", "namespace", fhr.Namespace, "name", fhr.Name, "error", err)
@@ -484,7 +522,7 @@ func (chs *ChartChangeSync) shouldUpgrade(chartsRepo string, currRel *hapi_relea
 
 	// compare values && Chart
 	if diff := cmp.Diff(currVals, desVals); diff != "" {
-		if chs.logDiffs {
+		if chs.config.LogDiffs {
 			chs.logger.Log("error", fmt.Sprintf("Release %s: values have diverged due to manual Chart release", currRel.GetName()), "diff", diff)
 		} else {
 			chs.logger.Log("error", fmt.Sprintf("Release %s: values have diverged due to manual Chart release", currRel.GetName()))
@@ -493,7 +531,7 @@ func (chs *ChartChangeSync) shouldUpgrade(chartsRepo string, currRel *hapi_relea
 	}
 
 	if diff := cmp.Diff(sortChartFields(currChart), sortChartFields(desChart)); diff != "" {
-		if chs.logDiffs {
+		if chs.config.LogDiffs {
 			chs.logger.Log("error", fmt.Sprintf("Release %s: Chart has diverged due to manual Chart release", currRel.GetName()), "diff", diff)
 		} else {
 			chs.logger.Log("error", fmt.Sprintf("Release %s: Chart has diverged due to manual Chart release", currRel.GetName()))

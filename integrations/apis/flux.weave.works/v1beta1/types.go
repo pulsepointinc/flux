@@ -5,6 +5,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/helm/pkg/chartutil"
+
+	"github.com/weaveworks/flux"
 )
 
 // +genclient
@@ -18,6 +20,13 @@ type FluxHelmRelease struct {
 
 	Spec   FluxHelmReleaseSpec   `json:"spec"`
 	Status FluxHelmReleaseStatus `json:"status"`
+}
+
+// ResourceID returns an ID made from the identifying parts of the
+// resource, as a convenience for Flux, which uses them
+// everywhere.
+func (fhr FluxHelmRelease) ResourceID() flux.ResourceID {
+	return flux.MakeResourceID(fhr.Namespace, "FluxHelmRelease", fhr.Name)
 }
 
 type ChartSource struct {
