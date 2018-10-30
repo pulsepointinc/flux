@@ -40,7 +40,7 @@ spec:
               oneOf:
               - required: ['git', 'path']
                 properties:
-                  gitURL:
+                  git:
                     type: string
                     format: git # not defined by OAS
                   path:
