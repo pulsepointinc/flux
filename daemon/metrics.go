@@ -44,4 +44,19 @@ var (
 		Name:      "queue_length_count",
 		Help:      "Count of jobs waiting in the queue to be run.",
 	}, []string{})
+
+	serviceCountMetric = prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+		Namespace: "flux",
+		Subsystem: "daemon",
+		Name:      "serviceCount",
+		Help:      "Number of services.",
+	}, []string{"type"})
+
+	updateEventsCountMetric = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Namespace: "flux",
+		Subsystem: "daemon",
+		Name:      "updates",
+		Help:      "Number of flux update events.",
+	}, []string{"type"})
+
 )
