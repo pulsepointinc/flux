@@ -50,13 +50,13 @@ var (
 		Subsystem: "daemon",
 		Name:      "serviceCount",
 		Help:      "Number of services.",
-	}, []string{"type"})
+	}, []string{fluxmetrics.LabelType})
 
 	updateEventsCountMetric = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Namespace: "flux",
 		Subsystem: "daemon",
 		Name:      "updates",
 		Help:      "Number of flux update events.",
-	}, []string{"type"})
+	}, []string{fluxmetrics.LabelType})
 
 )

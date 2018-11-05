@@ -190,7 +190,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 	if err != nil {
 		return errors.Wrap(err, "loading resources from repo")
 	}
-	serviceCountMetric.With("total").Set(float64(len(allResources)))
+	serviceCountMetric.With(fluxmetrics.LabelType, "total").Set(float64(len(allResources)))
 
 	var resourceErrors []event.ResourceError
 	// TODO supply deletes argument from somewhere (command-line?)
@@ -198,7 +198,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		logger.Log("err", err)
 		switch syncerr := err.(type) {
 		case cluster.SyncError:
-			serviceCountMetric.With("errors").Set(float64(len(syncerr)))
+			serviceCountMetric.With(fluxmetrics.LabelType, "errors").Set(float64(len(syncerr)))
 			for _, e := range syncerr {
 				resourceErrors = append(resourceErrors, event.ResourceError{
 					ID:    e.ResourceID(),
@@ -240,7 +240,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		ctx, cancel := context.WithTimeout(ctx, gitOpTimeout)
 		changedFiles, err := working.ChangedFiles(ctx, oldTagRev)
 		if err == nil && len(changedFiles) > 0 {
-			updateEventsCountMetric.With("files").Add(float64(len(changedFiles)))
+			updateEventsCountMetric.With(fluxmetrics.LabelType, "files").Add(float64(len(changedFiles)))
 			// We had some changed files, we're syncing a diff
 			// FIXME(michael): this won't be accurate when a file can have more than one resource
 			changedResources, err = d.Manifests.LoadManifests(working.Dir(), changedFiles)
@@ -249,7 +249,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		if err != nil {
 			return errors.Wrap(err, "loading resources from repo")
 		}
-		updateEventsCountMetric.With("services").Add(float64(len(changedResources)))
+		updateEventsCountMetric.With(fluxmetrics.LabelType, "services").Add(float64(len(changedResources)))
 	}
 
 	serviceIDs := flux.ResourceIDSet{}
@@ -274,7 +274,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 	// can skip the sync event if it wants to.
 	includes := make(map[string]bool)
 	if len(commits) > 0 {
-		updateEventsCountMetric.With("commits").Add(float64(len(commits)))
+		updateEventsCountMetric.With(fluxmetrics.LabelType, "commits").Add(float64(len(commits)))
 		var noteEvents []event.Event
 
 		// Find notes in revisions.
