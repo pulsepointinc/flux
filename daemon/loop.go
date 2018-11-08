@@ -190,6 +190,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 	if err != nil {
 		return errors.Wrap(err, "loading resources from repo")
 	}
+	serviceCountMetric.With(fluxmetrics.LabelType, "total").Set(float64(len(allResources)))
 
 	var syncErrors []event.ResourceError
 	// TODO supply deletes argument from somewhere (command-line?)
@@ -197,6 +198,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		logger.Log("err", err)
 		switch syncerr := err.(type) {
 		case cluster.SyncError:
+			serviceCountMetric.With(fluxmetrics.LabelType, "errors").Set(float64(len(syncerr)))
 			for _, e := range syncerr {
 				syncErrors = append(syncErrors, event.ResourceError{
 					ID:    e.ResourceID(),
@@ -238,6 +240,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		ctx, cancel := context.WithTimeout(ctx, gitOpTimeout)
 		changedFiles, err := working.ChangedFiles(ctx, oldTagRev)
 		if err == nil && len(changedFiles) > 0 {
+			updateEventsCountMetric.With(fluxmetrics.LabelType, "files").Add(float64(len(changedFiles)))
 			// We had some changed files, we're syncing a diff
 			// FIXME(michael): this won't be accurate when a file can have more than one resource
 			changedResources, err = d.Manifests.LoadManifests(working.Dir(), changedFiles)
@@ -246,6 +249,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		if err != nil {
 			return errors.Wrap(err, "loading resources from repo")
 		}
+		updateEventsCountMetric.With(fluxmetrics.LabelType, "services").Add(float64(len(changedResources)))
 	}
 
 	serviceIDs := flux.ResourceIDSet{}
@@ -270,6 +274,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 	// can skip the sync event if it wants to.
 	includes := make(map[string]bool)
 	if len(commits) > 0 {
+		updateEventsCountMetric.With(fluxmetrics.LabelType, "commits").Add(float64(len(commits)))
 		var noteEvents []event.Event
 
 		// Find notes in revisions.
