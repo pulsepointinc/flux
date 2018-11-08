@@ -61,6 +61,7 @@ func (d *Daemon) Loop(stop chan struct{}, wg *sync.WaitGroup, logger log.Logger)
 	d.AskForSync()
 	d.AskForImagePoll()
 	for {
+		logger.Log("trace", "main cycle")
 		select {
 		case <-stop:
 			logger.Log("stopping", "true")
@@ -77,6 +78,7 @@ func (d *Daemon) Loop(stop chan struct{}, wg *sync.WaitGroup, logger log.Logger)
 		case <-imagePollTimer.C:
 			d.AskForImagePoll()
 		case <-d.syncSoon:
+			logger.Log("trace", "sync soon")
 			if !syncTimer.Stop() {
 				select {
 				case <-syncTimer.C:
@@ -84,6 +86,7 @@ func (d *Daemon) Loop(stop chan struct{}, wg *sync.WaitGroup, logger log.Logger)
 				}
 			}
 			if err := d.doSync(logger); err != nil {
+				logger.Log("trace", "sync error", "err", err)
 				logger.Log("err", err)
 			}
 			syncTimer.Reset(d.SyncInterval)
@@ -150,6 +153,7 @@ func (d *LoopVars) AskForImagePoll() {
 // -- extra bits the loop needs
 
 func (d *Daemon) doSync(logger log.Logger) (retErr error) {
+	logger.Log("trace", "do sync")
 	started := time.Now().UTC()
 	defer func() {
 		syncDuration.With(
@@ -185,19 +189,24 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		return err
 	}
 
+	logger.Log("trace", "load resources")
 	// Get a map of all resources defined in the repo
 	allResources, err := d.Manifests.LoadManifests(working.Dir(), working.ManifestDirs())
 	if err != nil {
 		return errors.Wrap(err, "loading resources from repo")
 	}
+	logger.Log("trace", "serviceCountMetricTotal", "len", len(allResources))
 	serviceCountMetric.With(fluxmetrics.LabelType, "total").Set(float64(len(allResources)))
 
 	var syncErrors []event.ResourceError
 	// TODO supply deletes argument from somewhere (command-line?)
 	if err := fluxsync.Sync(d.Manifests, allResources, d.Cluster, false, logger); err != nil {
+		logger.Log("trace", "sync errors", "err", err)
+
 		logger.Log("err", err)
 		switch syncerr := err.(type) {
 		case cluster.SyncError:
+			logger.Log("trace", "serviceCountMetricErrors", "len", len(syncerr))
 			serviceCountMetric.With(fluxmetrics.LabelType, "errors").Set(float64(len(syncerr)))
 			for _, e := range syncerr {
 				syncErrors = append(syncErrors, event.ResourceError{
@@ -233,6 +242,8 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 	// Figure out which service IDs changed in this release
 	changedResources := map[string]resource.Resource{}
 
+	logger.Log("trace", "initial sync", "initial", initialSync)
+
 	if initialSync {
 		// no synctag, We are syncing everything from scratch
 		changedResources = allResources
@@ -240,6 +251,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		ctx, cancel := context.WithTimeout(ctx, gitOpTimeout)
 		changedFiles, err := working.ChangedFiles(ctx, oldTagRev)
 		if err == nil && len(changedFiles) > 0 {
+			logger.Log("trace", "updateEventsCountMetricFiles", "len", len(changedFiles))
 			updateEventsCountMetric.With(fluxmetrics.LabelType, "files").Add(float64(len(changedFiles)))
 			// We had some changed files, we're syncing a diff
 			// FIXME(michael): this won't be accurate when a file can have more than one resource
@@ -249,6 +261,7 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		if err != nil {
 			return errors.Wrap(err, "loading resources from repo")
 		}
+		logger.Log("trace", "updateEventsCountMetricServices", "len", len(changedResources))
 		updateEventsCountMetric.With(fluxmetrics.LabelType, "services").Add(float64(len(changedResources)))
 	}
 
@@ -266,6 +279,8 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 			return errors.Wrap(err, "loading notes from repo")
 		}
 	}
+
+	logger.Log("trace", "updateEventsCountMetricCommits", "len", len(commits))
 
 	// Collect any events that come from notes attached to the commits
 	// we just synced. While we're doing this, keep track of what
