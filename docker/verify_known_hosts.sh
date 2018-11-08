@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -eu
+set -x
 
 known_hosts_file=${1}
 known_hosts_file=${known_hosts_file:-/etc/ssh/ssh_known_hosts}
