@@ -71,8 +71,8 @@ func (s ReleaseSpec) ReleaseType() ReleaseType {
 }
 
 func (s ReleaseSpec) CalculateRelease(rc ReleaseContext, logger log.Logger) ([]*ControllerUpdate, Result, error) {
-	logger.Log("updateTrace.[release]CalculateRelease.", " ReleaseSpec")
-	print("ReleaseSpec", s)
+	logger.Log("updateTrace.[release]CalculateRelease.ReleaseSpec", s)
+	// print("ReleaseSpec", s)
 	results := Result{}
 	timer := NewStageTimer("select_services")
 	updates, err := s.selectServices(rc, results, logger)
