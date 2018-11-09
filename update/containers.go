@@ -26,6 +26,7 @@ type ContainerSpecs struct {
 // CalculateRelease computes required controller updates to satisfy this specification.
 // It returns an error if any spec calculation fails unless `SkipMismatches` is true.
 func (s ContainerSpecs) CalculateRelease(rc ReleaseContext, logger log.Logger) ([]*ControllerUpdate, Result, error) {
+	logger.Log("updateTrace", "[containers] CalculateRelease")
 	results := Result{}
 	prefilter, postfilter := s.filters()
 	all, err := rc.SelectServices(results, prefilter, postfilter)

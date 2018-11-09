@@ -16,7 +16,7 @@ import (
 )
 
 // If true, every git invocation will be echoed to stdout
-const trace = false
+const trace = true
 
 func config(ctx context.Context, workingDir, user, email string) error {
 	for k, v := range map[string]string{
@@ -258,6 +258,7 @@ func execGitCmd(ctx context.Context, dir string, out io.Writer, args ...string) 
 		for _, arg := range args {
 			print(` "`, arg, `"`)
 		}
+		println("dir", dir)
 		println()
 	}
 	c := exec.CommandContext(ctx, "git", args...)

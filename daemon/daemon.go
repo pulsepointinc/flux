@@ -325,6 +325,7 @@ func (d *Daemon) UpdateManifests(ctx context.Context, spec update.Spec) (job.ID,
 			_, err := d.executeJob(id, d.makeJobFromUpdate(d.release(spec, s)), d.Logger)
 			return id, err
 		}
+		d.Logger.Log("updateTrace", "[daemon] UpdateManifests")
 		return d.queueJob(d.makeLoggingJobFunc(d.makeJobFromUpdate(d.release(spec, s)))), nil
 	case policy.Updates:
 		return d.queueJob(d.makeLoggingJobFunc(d.makeJobFromUpdate(d.updatePolicy(spec, s)))), nil
@@ -436,6 +437,7 @@ func (d *Daemon) updatePolicy(spec update.Spec, updates policy.Updates) updateFu
 
 func (d *Daemon) release(spec update.Spec, c release.Changes) updateFunc {
 	return func(ctx context.Context, jobID job.ID, working *git.Checkout, logger log.Logger) (job.Result, error) {
+		d.Logger.Log("updateTrace", "[daemon] release")
 		rc := release.NewReleaseContext(d.Cluster, d.Manifests, d.Registry, working)
 		result, err := release.Release(rc, c, logger)
 

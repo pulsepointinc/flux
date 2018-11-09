@@ -71,9 +71,11 @@ func (s ReleaseSpec) ReleaseType() ReleaseType {
 }
 
 func (s ReleaseSpec) CalculateRelease(rc ReleaseContext, logger log.Logger) ([]*ControllerUpdate, Result, error) {
+	logger.Log("updateTrace", "[release] CalculateRelease")
 	results := Result{}
 	timer := NewStageTimer("select_services")
 	updates, err := s.selectServices(rc, results)
+	logger.Log("updateTrace", "[release] ", "services", len(updates))
 	timer.ObserveDuration()
 	if err != nil {
 		return nil, nil, err
@@ -82,6 +84,7 @@ func (s ReleaseSpec) CalculateRelease(rc ReleaseContext, logger log.Logger) ([]*
 
 	timer = NewStageTimer("lookup_images")
 	updates, err = s.calculateImageUpdates(rc, updates, results, logger)
+	logger.Log("updateTrace", "[release] ", "updates", len(updates))
 	timer.ObserveDuration()
 	if err != nil {
 		return nil, nil, err
@@ -182,6 +185,7 @@ func (s ReleaseSpec) markSkipped(results Result) {
 // if not, it indicates there's likely some problem with the running
 // system vs the definitions given in the repo.)
 func (s ReleaseSpec) calculateImageUpdates(rc ReleaseContext, candidates []*ControllerUpdate, results Result, logger log.Logger) ([]*ControllerUpdate, error) {
+	logger.Log("updateTrace", "[release] calculateImageUpdates")
 	// Compile an `ImageRepos` of all relevant images
 	var imageRepos ImageRepos
 	var singleRepo image.CanonicalName
@@ -191,11 +195,13 @@ func (s ReleaseSpec) calculateImageUpdates(rc ReleaseContext, candidates []*Cont
 	case ImageSpecLatest:
 		imageRepos, err = fetchUpdatableImageRepos(rc.Registry(), candidates, logger)
 	default:
+		logger.Log("updateTrace", "[release] Image", "spec", s.ImageSpec)
 		var ref image.Ref
 		ref, err = s.ImageSpec.AsRef()
 		if err == nil {
 			singleRepo = ref.CanonicalName()
 			imageRepos, err = exactImageRepos(rc.Registry(), []image.Ref{ref})
+			logger.Log("updateTrace", "[release] ", "singleRepo", singleRepo, "imageRepo", imageRepos)
 		}
 	}
 
@@ -224,6 +230,7 @@ func (s ReleaseSpec) calculateImageUpdates(rc ReleaseContext, candidates []*Cont
 
 		for _, container := range containers {
 			currentImageID := container.Image
+			logger.Log("updateTrace", "[release] container", "currentImageID", currentImageID)
 
 			tagPattern := policy.PatternAll
 			// Use the container's filter if the spec does not want to force release, or
@@ -235,8 +242,11 @@ func (s ReleaseSpec) calculateImageUpdates(rc ReleaseContext, candidates []*Cont
 			}
 
 			filteredImages := imageRepos.GetRepoImages(currentImageID.Name).FilterAndSort(tagPattern)
+			logger.Log("updateTrace", "[release] ", "filteredImages", filteredImages)
 			latestImage, ok := filteredImages.Latest()
+			logger.Log("updateTrace", "[release] ", "latestImage", latestImage)
 			if !ok {
+				logger.Log("updateTrace", "[release] !ok")
 				if currentImageID.CanonicalName() != singleRepo {
 					ignoredOrSkipped = ReleaseStatusIgnored
 				} else {
@@ -246,6 +256,7 @@ func (s ReleaseSpec) calculateImageUpdates(rc ReleaseContext, candidates []*Cont
 			}
 
 			if currentImageID == latestImage.ID {
+				logger.Log("updateTrace", "[release] currentImageID == latestImage.ID")
 				ignoredOrSkipped = ReleaseStatusSkipped
 				continue
 			}
@@ -261,6 +272,7 @@ func (s ReleaseSpec) calculateImageUpdates(rc ReleaseContext, candidates []*Cont
 			})
 		}
 
+		logger.Log("updateTrace", "[release] ", "containerUpdates", containerUpdates)
 		switch {
 		case len(containerUpdates) > 0:
 			u.Updates = containerUpdates
@@ -286,6 +298,8 @@ func (s ReleaseSpec) calculateImageUpdates(rc ReleaseContext, candidates []*Cont
 			}
 		}
 	}
+
+	logger.Log("updateTrace", "[release] ", "updates", updates)
 
 	return updates, nil
 }

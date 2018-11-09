@@ -31,7 +31,12 @@ func Release(rc *ReleaseContext, changes Changes, logger log.Logger) (results up
 
 	logger = log.With(logger, "type", "release")
 
+	logger.Log("updateTrace", "[releaser] Release")
+
 	before, err := rc.LoadManifests()
+	logger.Log("updateTrace", "[releaser] resources loaded", "len", len(before))
+
+
 	updates, results, err := changes.CalculateRelease(rc, logger)
 	if err != nil {
 		return nil, err
@@ -43,6 +48,7 @@ func Release(rc *ReleaseContext, changes Changes, logger log.Logger) (results up
 	}
 
 	after, err := rc.LoadManifests()
+	logger.Log("updateTrace", "[releaser] resources loaded after", "len", len(after))
 	if err != nil {
 		return nil, MakeReleaseError(errors.Wrap(err, "loading resources after updates"))
 	}
@@ -55,6 +61,7 @@ func Release(rc *ReleaseContext, changes Changes, logger log.Logger) (results up
 }
 
 func ApplyChanges(rc *ReleaseContext, updates []*update.ControllerUpdate, logger log.Logger) error {
+	logger.Log("updateTrace", "[releaser] ApplyChanges")
 	logger.Log("updates", len(updates))
 	if len(updates) == 0 {
 		logger.Log("exit", "no images to update for services given")
