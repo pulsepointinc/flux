@@ -209,6 +209,8 @@ func (d *Daemon) doSync(logger log.Logger) (retErr error) {
 		default:
 			return err
 		}
+	} else {
+		serviceCountMetric.With(fluxmetrics.LabelType, "errors").Set(0)
 	}
 
 	// update notes and emit events for applied commits
