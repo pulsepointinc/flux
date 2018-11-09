@@ -71,7 +71,8 @@ func (s ReleaseSpec) ReleaseType() ReleaseType {
 }
 
 func (s ReleaseSpec) CalculateRelease(rc ReleaseContext, logger log.Logger) ([]*ControllerUpdate, Result, error) {
-	logger.Log("updateTrace. [release] CalculateRelease. ReleaseSpec", s)
+	logger.Log("updateTrace.[release]CalculateRelease.", " ReleaseSpec")
+	print("ReleaseSpec", s)
 	results := Result{}
 	timer := NewStageTimer("select_services")
 	updates, err := s.selectServices(rc, results, logger)
@@ -109,7 +110,7 @@ func (s ReleaseSpec) CommitMessage(result Result) string {
 // in question based on the running services and those defined in the
 // repo. Fill in the release results along the way.
 func (s ReleaseSpec) selectServices(rc ReleaseContext, results Result, logger log.Logger) ([]*ControllerUpdate, error) {
-	logger.Log("updateTrace. ", "selectServices")
+	logger.Log("updateTrace.", "selectServices")
 	// Build list of filters
 	prefilters, postfilters, err := s.filters(rc, logger)
 	if err != nil {
@@ -120,13 +121,13 @@ func (s ReleaseSpec) selectServices(rc ReleaseContext, results Result, logger lo
 }
 
 func (s ReleaseSpec) filters(rc ReleaseContext, logger log.Logger) ([]ControllerFilter, []ControllerFilter, error) {
-	logger.Log("updateTrace. ", "filters")
+	logger.Log("updateTrace.", "filters")
 
 	var prefilters, postfilters []ControllerFilter
 
 	ids := []flux.ResourceID{}
 	for _, ss := range s.ServiceSpecs {
-		logger.Log("updateTrace. ServiceSpec", ss)
+		logger.Log("updateTrace.ServiceSpec", ss)
 		if ss == ResourceSpecAll {
 			// "<all>" Overrides any other filters
 			ids = []flux.ResourceID{}
@@ -138,12 +139,12 @@ func (s ReleaseSpec) filters(rc ReleaseContext, logger log.Logger) ([]Controller
 		}
 		ids = append(ids, id)
 	}
-	logger.Log("updateTrace. ids", ids)
+	logger.Log("updateTrace.ids", ids)
 	if len(ids) > 0 {
 		prefilters = append(prefilters, &IncludeFilter{ids})
 	}
 
-	logger.Log("updateTrace. excludes", len(s.Excludes))
+	logger.Log("updateTrace.excludes", len(s.Excludes))
 	// Exclude filter
 	if len(s.Excludes) > 0 {
 		prefilters = append(prefilters, &ExcludeFilter{s.Excludes})
@@ -155,7 +156,7 @@ func (s ReleaseSpec) filters(rc ReleaseContext, logger log.Logger) ([]Controller
 		if err != nil {
 			return nil, nil, err
 		}
-		logger.Log("updateTrace. imagefilter", id)
+		logger.Log("updateTrace.imagefilter", id)
 		postfilters = append(postfilters, &SpecificImageFilter{id})
 	}
 
@@ -163,7 +164,7 @@ func (s ReleaseSpec) filters(rc ReleaseContext, logger log.Logger) ([]Controller
 	if !(len(ids) > 0 && s.Force) {
 		postfilters = append(postfilters, &LockedFilter{})
 	}
-	logger.Log("updateTrace. postfilters", len(postfilters))
+	logger.Log("updateTrace.postfilters", len(postfilters))
 
 	return prefilters, postfilters, nil
 }
@@ -307,6 +308,7 @@ func (s ReleaseSpec) calculateImageUpdates(rc ReleaseContext, candidates []*Cont
 		}
 	}
 
+	print("updates", updates)
 	logger.Log("updateTrace", "[release] ", "updates", updates)
 
 	return updates, nil

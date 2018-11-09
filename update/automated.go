@@ -25,6 +25,7 @@ func (a *Automated) Add(service flux.ResourceID, container resource.Container, i
 }
 
 func (a *Automated) CalculateRelease(rc ReleaseContext, logger log.Logger) ([]*ControllerUpdate, Result, error) {
+	logger.Log("updateTrace", "[automated] CalculateRelease")
 	prefilters := []ControllerFilter{
 		&IncludeFilter{a.serviceIDs()},
 	}

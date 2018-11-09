@@ -68,10 +68,10 @@ func (rc *ReleaseContext) WriteUpdates(updates []*update.ControllerUpdate) error
 // to filter the controllers so found, either before (`prefilters`) or
 // after (`postfilters`) consulting the cluster.
 func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, postfilters []update.ControllerFilter, logger log.Logger) ([]*update.ControllerUpdate, error) {
-	logger.Log("updateTrace. SelectServices. pre", len(prefilters), "post", len(postfilters))
+	logger.Log("updateTrace.SelectServices.pre", len(prefilters), "post", len(postfilters))
 	// Start with all the controllers that are defined in the repo.
 	allDefined, err := rc.WorkloadsForUpdate()
-	logger.Log("updateTrace. ", "all", len(allDefined))
+	logger.Log("updateTrace.", "all", len(allDefined))
 
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 	// cluster about.
 	var toAskClusterAbout []flux.ResourceID
 	for _, s := range allDefined {
-		logger.Log("updateTrace. service", s)
+		logger.Log("updateTrace.service", s)
 
 		res := s.Filter(prefilters...)
 		if res.Error == "" {
@@ -91,7 +91,7 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 				Status: update.ReleaseStatusSkipped,
 				Error:  update.NotInCluster,
 			}
-			logger.Log("updateTrace. prefiltered", s.ResourceID)
+			logger.Log("updateTrace.prefiltered", s.ResourceID)
 			toAskClusterAbout = append(toAskClusterAbout, s.ResourceID)
 		} else {
 			results[s.ResourceID] = res
@@ -107,7 +107,7 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 	var forPostFiltering []*update.ControllerUpdate
 	// Compare defined vs running
 	for _, s := range definedAndRunning {
-		logger.Log("updateTrace. definedAndRunning", s.ID)
+		logger.Log("updateTrace.definedAndRunning", s.ID)
 
 		update, ok := allDefined[s.ID]
 		if !ok {
@@ -124,7 +124,7 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 	for _, s := range forPostFiltering {
 		fr := s.Filter(postfilters...)
 		results[s.ResourceID] = fr
-		logger.Log("updateTrace. postfilter", s.ResourceID, "result", fr)
+		logger.Log("updateTrace.postfilter", s.ResourceID, "result", fr)
 		if fr.Status == update.ReleaseStatusSuccess || fr.Status == "" {
 			filteredUpdates = append(filteredUpdates, s)
 		}
