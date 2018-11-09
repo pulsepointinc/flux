@@ -68,9 +68,11 @@ func (rc *ReleaseContext) WriteUpdates(updates []*update.ControllerUpdate) error
 // to filter the controllers so found, either before (`prefilters`) or
 // after (`postfilters`) consulting the cluster.
 func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, postfilters []update.ControllerFilter, logger log.Logger) ([]*update.ControllerUpdate, error) {
-
+	logger.Log("updateTrace. SelectServices. pre", len(prefilters), "post", len(postfilters))
 	// Start with all the controllers that are defined in the repo.
 	allDefined, err := rc.WorkloadsForUpdate()
+	logger.Log("updateTrace. ", "all", len(allDefined))
+
 	if err != nil {
 		return nil, err
 	}

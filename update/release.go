@@ -71,11 +71,11 @@ func (s ReleaseSpec) ReleaseType() ReleaseType {
 }
 
 func (s ReleaseSpec) CalculateRelease(rc ReleaseContext, logger log.Logger) ([]*ControllerUpdate, Result, error) {
-	logger.Log("updateTrace", "[release] CalculateRelease")
+	logger.Log("updateTrace. [release] CalculateRelease. ReleaseSpec", s)
 	results := Result{}
 	timer := NewStageTimer("select_services")
 	updates, err := s.selectServices(rc, results, logger)
-	logger.Log("updateTrace", "[release] ", "services", len(updates))
+	logger.Log("updateTrace", "[release] ", "services", len(updates), "err", err)
 	timer.ObserveDuration()
 	if err != nil {
 		return nil, nil, err
@@ -109,6 +109,7 @@ func (s ReleaseSpec) CommitMessage(result Result) string {
 // in question based on the running services and those defined in the
 // repo. Fill in the release results along the way.
 func (s ReleaseSpec) selectServices(rc ReleaseContext, results Result, logger log.Logger) ([]*ControllerUpdate, error) {
+	logger.Log("updateTrace. ", "selectServices")
 	// Build list of filters
 	prefilters, postfilters, err := s.filters(rc, logger)
 	if err != nil {
@@ -119,6 +120,8 @@ func (s ReleaseSpec) selectServices(rc ReleaseContext, results Result, logger lo
 }
 
 func (s ReleaseSpec) filters(rc ReleaseContext, logger log.Logger) ([]ControllerFilter, []ControllerFilter, error) {
+	logger.Log("updateTrace. ", "filters")
+
 	var prefilters, postfilters []ControllerFilter
 
 	ids := []flux.ResourceID{}
