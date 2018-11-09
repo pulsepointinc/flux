@@ -29,11 +29,13 @@ func (s ContainerSpecs) CalculateRelease(rc ReleaseContext, logger log.Logger) (
 	logger.Log("updateTrace", "[containers] CalculateRelease")
 	results := Result{}
 	prefilter, postfilter := s.filters()
-	all, err := rc.SelectServices(results, prefilter, postfilter)
+	all, err := rc.SelectServices(results, prefilter, postfilter, logger)
+	logger.Log("updateTrace. All", all)
 	if err != nil {
 		return nil, results, err
 	}
 	updates := s.controllerUpdates(results, all)
+	logger.Log("updateTrace. Updates", updates)
 	return updates, results, s.resultsError(results)
 }
 

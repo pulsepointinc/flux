@@ -12,6 +12,7 @@ import (
 	"github.com/weaveworks/flux/registry"
 	"github.com/weaveworks/flux/resource"
 	"github.com/weaveworks/flux/update"
+	"github.com/go-kit/kit/log"
 )
 
 type ReleaseContext struct {
@@ -66,7 +67,7 @@ func (rc *ReleaseContext) WriteUpdates(updates []*update.ControllerUpdate) error
 // files and the running cluster. `ControllerFilter`s can be provided
 // to filter the controllers so found, either before (`prefilters`) or
 // after (`postfilters`) consulting the cluster.
-func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, postfilters []update.ControllerFilter) ([]*update.ControllerUpdate, error) {
+func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, postfilters []update.ControllerFilter, logger log.Logger) ([]*update.ControllerUpdate, error) {
 
 	// Start with all the controllers that are defined in the repo.
 	allDefined, err := rc.WorkloadsForUpdate()
@@ -78,6 +79,8 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 	// cluster about.
 	var toAskClusterAbout []flux.ResourceID
 	for _, s := range allDefined {
+		logger.Log("updateTrace. service", s)
+
 		res := s.Filter(prefilters...)
 		if res.Error == "" {
 			// Give these a default value, in case we don't find them
@@ -86,6 +89,7 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 				Status: update.ReleaseStatusSkipped,
 				Error:  update.NotInCluster,
 			}
+			logger.Log("updateTrace. prefiltered", s.ResourceID)
 			toAskClusterAbout = append(toAskClusterAbout, s.ResourceID)
 		} else {
 			results[s.ResourceID] = res
@@ -101,6 +105,8 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 	var forPostFiltering []*update.ControllerUpdate
 	// Compare defined vs running
 	for _, s := range definedAndRunning {
+		logger.Log("updateTrace. definedAndRunning", s.ID)
+
 		update, ok := allDefined[s.ID]
 		if !ok {
 			// A contradiction: we asked only about defined
@@ -116,6 +122,7 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 	for _, s := range forPostFiltering {
 		fr := s.Filter(postfilters...)
 		results[s.ResourceID] = fr
+		logger.Log("updateTrace. postfilter", s.ResourceID, "result", fr)
 		if fr.Status == update.ReleaseStatusSuccess || fr.Status == "" {
 			filteredUpdates = append(filteredUpdates, s)
 		}

@@ -30,7 +30,7 @@ func (a *Automated) CalculateRelease(rc ReleaseContext, logger log.Logger) ([]*C
 	}
 
 	result := Result{}
-	updates, err := rc.SelectServices(result, prefilters, nil)
+	updates, err := rc.SelectServices(result, prefilters, nil, logger)
 	if err != nil {
 		return nil, nil, err
 	}

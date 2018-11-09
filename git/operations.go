@@ -258,8 +258,8 @@ func execGitCmd(ctx context.Context, dir string, out io.Writer, args ...string) 
 		for _, arg := range args {
 			print(` "`, arg, `"`)
 		}
-		println("dir", dir)
 		println()
+		println("dir", dir)
 	}
 	c := exec.CommandContext(ctx, "git", args...)
 
