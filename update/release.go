@@ -71,7 +71,7 @@ func (s ReleaseSpec) ReleaseType() ReleaseType {
 }
 
 func (s ReleaseSpec) CalculateRelease(rc ReleaseContext, logger log.Logger) ([]*ControllerUpdate, Result, error) {
-	logger.Log("updateTrace.[release]CalculateRelease.ReleaseSpec", s)
+	logger.Log("updateTrace.[release]CalculateRelease.ReleaseSpec", fmt.Sprint(s))
 	// print("ReleaseSpec", s)
 	results := Result{}
 	timer := NewStageTimer("select_services")
@@ -139,9 +139,9 @@ func (s ReleaseSpec) filters(rc ReleaseContext, logger log.Logger) ([]Controller
 		}
 		ids = append(ids, id)
 	}
-	logger.Log("updateTrace.ids", ids)
+	logger.Log("updateTrace.ids", fmt.Sprint(ids))
 	if len(ids) > 0 {
-		prefilters = append(prefilters, &IncludeFilter{ids})
+		prefilters = append(prefilters, &IncludeFilter{ids, logger})
 	}
 
 	logger.Log("updateTrace.excludes", len(s.Excludes))
@@ -157,7 +157,7 @@ func (s ReleaseSpec) filters(rc ReleaseContext, logger log.Logger) ([]Controller
 			return nil, nil, err
 		}
 		logger.Log("updateTrace.imagefilter", id)
-		postfilters = append(postfilters, &SpecificImageFilter{id})
+		postfilters = append(postfilters, &SpecificImageFilter{id, logger})
 	}
 
 	// Filter out locked controllers unless given a specific controller(s) and forced

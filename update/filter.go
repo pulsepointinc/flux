@@ -4,6 +4,7 @@ import (
 	"github.com/weaveworks/flux"
 	"github.com/weaveworks/flux/image"
 	"github.com/weaveworks/flux/policy"
+	"github.com/go-kit/kit/log"
 )
 
 const (
@@ -22,11 +23,13 @@ const (
 
 type SpecificImageFilter struct {
 	Img image.Ref
+	logger log.Logger
 }
 
 func (f *SpecificImageFilter) Filter(u ControllerUpdate) ControllerResult {
 	// If there are no containers, then we can't check the image.
 	if len(u.Controller.Containers.Containers) == 0 {
+		f.logger.Log("updateTrace.ImageFilter", "ContainersNotFound")
 		return ControllerResult{
 			Status: ReleaseStatusIgnored,
 			Error:  NotInCluster,
@@ -35,10 +38,14 @@ func (f *SpecificImageFilter) Filter(u ControllerUpdate) ControllerResult {
 	// For each container in update
 	for _, c := range u.Controller.Containers.Containers {
 		if c.Image.CanonicalName() == f.Img.CanonicalName() {
+			f.logger.Log("updateTrace.ImageFilter.Found", f.Img.CanonicalName())
 			// We want to update this
 			return ControllerResult{}
+		} else {
+			f.logger.Log("updateTrace.ImageFilter.NotFound", f.Img.CanonicalName(), "containerImage", c.Image.CanonicalName())
 		}
 	}
+	f.logger.Log("updateTrace.ImageFilter.NothingFound")
 	return ControllerResult{
 		Status: ReleaseStatusIgnored,
 		Error:  DifferentImage,
@@ -63,12 +70,20 @@ func (f *ExcludeFilter) Filter(u ControllerUpdate) ControllerResult {
 
 type IncludeFilter struct {
 	IDs []flux.ResourceID
+	logger log.Logger
 }
 
 func (f *IncludeFilter) Filter(u ControllerUpdate) ControllerResult {
 	for _, id := range f.IDs {
 		if u.ResourceID == id {
+			if f.logger != nil {
+				f.logger.Log("updateTrace.IncludeFiletr.Found", u.ResourceID)
+			}
 			return ControllerResult{}
+		} else {
+			if f.logger != nil {
+				f.logger.Log("updateTrace.IncludeFiletr.NotFound", u.ResourceID, "check", id)
+			}
 		}
 	}
 	return ControllerResult{

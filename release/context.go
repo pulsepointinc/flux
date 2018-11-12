@@ -71,7 +71,7 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 	logger.Log("updateTrace.SelectServices.pre", len(prefilters), "post", len(postfilters))
 	// Start with all the controllers that are defined in the repo.
 	allDefined, err := rc.WorkloadsForUpdate()
-	logger.Log("updateTrace.", "all", len(allDefined))
+	logger.Log("updateTrace.all", len(allDefined))
 
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 	// cluster about.
 	var toAskClusterAbout []flux.ResourceID
 	for _, s := range allDefined {
-		logger.Log("updateTrace.service", s)
+		logger.Log("updateTrace.service", s.ResourceID)
 
 		res := s.Filter(prefilters...)
 		if res.Error == "" {
@@ -94,6 +94,7 @@ func (rc *ReleaseContext) SelectServices(results update.Result, prefilters, post
 			logger.Log("updateTrace.prefiltered", s.ResourceID)
 			toAskClusterAbout = append(toAskClusterAbout, s.ResourceID)
 		} else {
+			logger.Log("updateTrace.prefilteredOut", s.ResourceID)
 			results[s.ResourceID] = res
 		}
 	}

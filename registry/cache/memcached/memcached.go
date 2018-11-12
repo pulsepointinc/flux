@@ -160,6 +160,13 @@ func (c *MemcacheClient) updateLoop(updateInterval time.Duration) {
 
 // updateMemcacheServers sets a memcache server list from SRV records. SRV
 // priority & weight are ignored.
+func (c *MemcacheClient) updateMemcacheServers_local() error {
+	servers := []string{
+		"localhost:11211",
+	}
+	return c.serverList.SetServers(servers...)
+}
+
 func (c *MemcacheClient) updateMemcacheServers() error {
 	_, addrs, err := net.LookupSRV(c.service, "tcp", c.hostname)
 	if err != nil {
