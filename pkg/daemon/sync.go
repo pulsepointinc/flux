@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"github.com/fluxcd/flux/pkg/metrics"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"path/filepath"
@@ -149,14 +150,17 @@ func doSync(ctx context.Context, manifestsStore manifests.Store, clus cluster.Cl
 	logger log.Logger) (map[string]resource.Resource, []event.ResourceError, error) {
 	resources, err := manifestsStore.GetAllResourcesByID(ctx)
 	if err != nil {
+		errorsCountMetric.With(metrics.LabelType, "manifest").Set(1)
 		return nil, nil, errors.Wrap(err, "loading resources from repo")
 	}
+	errorsCountMetric.With(metrics.LabelType, "manifest").Set(0)
 
 	var resourceErrors []event.ResourceError
 	if err := fluxsync.Sync(syncSetName, resources, clus); err != nil {
 		switch syncerr := err.(type) {
 		case cluster.SyncError:
 			logger.Log("err", err)
+			errorsCountMetric.With(metrics.LabelType, "sync").Set(float64(len(syncerr)))
 			for _, e := range syncerr {
 				resourceErrors = append(resourceErrors, event.ResourceError{
 					ID:    e.ResourceID,
@@ -165,8 +169,11 @@ func doSync(ctx context.Context, manifestsStore manifests.Store, clus cluster.Cl
 				})
 			}
 		default:
+			errorsCountMetric.With(metrics.LabelType, "sync").Set(1)
 			return nil, nil, err
 		}
+	} else {
+		errorsCountMetric.With(metrics.LabelType, "sync").Set(0)
 	}
 	return resources, resourceErrors, nil
 }

@@ -44,4 +44,11 @@ var (
 		Name:      "queue_length_count",
 		Help:      "Count of jobs waiting in the queue to be run.",
 	}, []string{})
+
+	errorsCountMetric = prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+		Namespace: "flux",
+		Subsystem: "daemon",
+		Name:      "errors_count",
+		Help:      "Number of errors.",
+	}, []string{fluxmetrics.LabelType})
 )
