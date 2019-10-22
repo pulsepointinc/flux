@@ -26,7 +26,7 @@ import (
 	fluxsync "github.com/fluxcd/flux/pkg/sync"
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus"
-	io_prometheus_client "github.com/prometheus/client_model/go"
+	promdto "github.com/prometheus/client_model/go"
 )
 
 const (
@@ -87,7 +87,7 @@ func daemon(t *testing.T) (*Daemon, func()) {
 	}
 }
 
-func findMetric(name string, metricType io_prometheus_client.MetricType, labels ...string) (*io_prometheus_client.Metric, error) {
+func findMetric(name string, metricType promdto.MetricType, labels ...string) (*promdto.Metric, error) {
 	metricsRegistry := prometheus.DefaultRegisterer.(*prometheus.Registry)
 	if metrics, err := metricsRegistry.Gather(); err == nil {
 		for _, metricFamily := range metrics {
@@ -119,12 +119,12 @@ func findMetric(name string, metricType io_prometheus_client.MetricType, labels 
 }
 
 func checkErrorsMetrics(t *testing.T, manifestErrors, syncErrors int) {
-	if metric, err := findMetric("flux_daemon_errors_count", io_prometheus_client.MetricType_GAUGE, "type", "manifest"); err != nil {
+	if metric, err := findMetric("flux_daemon_errors_count", promdto.MetricType_GAUGE, "type", "manifest"); err != nil {
 		t.Errorf("Error collecting metrics %v", err)
 	} else if int(*metric.Gauge.Value) != manifestErrors {
 		t.Errorf("Manifest errors must be %v. Got %v", manifestErrors, *metric.Gauge.Value)
 	}
-	if metric, err := findMetric("flux_daemon_errors_count", io_prometheus_client.MetricType_GAUGE, "type", "sync"); err != nil {
+	if metric, err := findMetric("flux_daemon_errors_count", promdto.MetricType_GAUGE, "type", "sync"); err != nil {
 		t.Errorf("Error collecting metrics %v", err)
 	} else if int(*metric.Gauge.Value) != syncErrors {
 		t.Errorf("Sync errors must be %v. Got %v", syncErrors, *metric.Gauge.Value)
@@ -195,12 +195,12 @@ func TestPullAndSync_InitialSync(t *testing.T) {
 	}
 
 	// Check 0 error stats
-	if metric, err := findMetric("flux_daemon_errors_count", io_prometheus_client.MetricType_GAUGE, "type", "manifest"); err != nil {
+	if metric, err := findMetric("flux_daemon_errors_count", promdto.MetricType_GAUGE, "type", "manifest"); err != nil {
 		t.Errorf("Error collecting metrics %v", err)
 	} else if int(*metric.Gauge.Value) != 0 {
 		t.Errorf("Manifest errors must be 0. Got %v", *metric.Gauge.Value)
 	}
-	if metric, err := findMetric("flux_daemon_errors_count", io_prometheus_client.MetricType_GAUGE, "type", "sync"); err != nil {
+	if metric, err := findMetric("flux_daemon_errors_count", promdto.MetricType_GAUGE, "type", "sync"); err != nil {
 		t.Errorf("Error collecting metrics %v", err)
 	} else if int(*metric.Gauge.Value) != 0 {
 		t.Errorf("Sync errors must be 0. Got %v", *metric.Gauge.Value)
