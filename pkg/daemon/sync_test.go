@@ -118,16 +118,16 @@ func findMetric(name string, metricType promdto.MetricType, labels ...string) (*
 	}
 }
 
-func checkErrorsMetrics(t *testing.T, manifestErrors, syncErrors int) {
-	if metric, err := findMetric("flux_daemon_errors_count", promdto.MetricType_GAUGE, "type", "manifest"); err != nil {
+func checkSyncManifestsMetrics(t *testing.T, success, failures int) {
+	if metric, err := findMetric("flux_daemon_sync_manifests", promdto.MetricType_GAUGE, "success", "true"); err != nil {
 		t.Errorf("Error collecting metrics %v", err)
-	} else if int(*metric.Gauge.Value) != manifestErrors {
-		t.Errorf("Manifest errors must be %v. Got %v", manifestErrors, *metric.Gauge.Value)
+	} else if int(*metric.Gauge.Value) != success {
+		t.Errorf("Manifest success must be %v. Got %v", success, *metric.Gauge.Value)
 	}
-	if metric, err := findMetric("flux_daemon_errors_count", promdto.MetricType_GAUGE, "type", "sync"); err != nil {
+	if metric, err := findMetric("flux_daemon_sync_manifests", promdto.MetricType_GAUGE, "success", "false"); err != nil {
 		t.Errorf("Error collecting metrics %v", err)
-	} else if int(*metric.Gauge.Value) != syncErrors {
-		t.Errorf("Sync errors must be %v. Got %v", syncErrors, *metric.Gauge.Value)
+	} else if int(*metric.Gauge.Value) != failures {
+		t.Errorf("Manifest sync errors must be %v. Got %v", failures, *metric.Gauge.Value)
 	}
 }
 
@@ -195,16 +195,7 @@ func TestPullAndSync_InitialSync(t *testing.T) {
 	}
 
 	// Check 0 error stats
-	if metric, err := findMetric("flux_daemon_errors_count", promdto.MetricType_GAUGE, "type", "manifest"); err != nil {
-		t.Errorf("Error collecting metrics %v", err)
-	} else if int(*metric.Gauge.Value) != 0 {
-		t.Errorf("Manifest errors must be 0. Got %v", *metric.Gauge.Value)
-	}
-	if metric, err := findMetric("flux_daemon_errors_count", promdto.MetricType_GAUGE, "type", "sync"); err != nil {
-		t.Errorf("Error collecting metrics %v", err)
-	} else if int(*metric.Gauge.Value) != 0 {
-		t.Errorf("Sync errors must be 0. Got %v", *metric.Gauge.Value)
-	}
+	checkSyncManifestsMetrics(t, len(expectedResourceIDs), 0)
 }
 
 func TestDoSync_NoNewCommits(t *testing.T) {
@@ -419,6 +410,11 @@ func TestDoSync_WithErrors(t *testing.T) {
 	d, cleanup := daemon(t)
 	defer cleanup()
 
+	expectedResourceIDs := resource.IDs{}
+	for id, _ := range testfiles.ResourceMap {
+		expectedResourceIDs = append(expectedResourceIDs, id)
+	}
+
 	k8s.SyncFunc = func(def cluster.SyncSet) error {
 		return nil
 	}
@@ -438,7 +434,7 @@ func TestDoSync_WithErrors(t *testing.T) {
 	}
 
 	// Check 0 error stats
-	checkErrorsMetrics(t, 0, 0)
+	checkSyncManifestsMetrics(t, len(expectedResourceIDs), 0)
 
 	// Now add wrong manifest
 	err = d.WithWorkingClone(ctx, func(checkout *git.Checkout) error {
@@ -467,7 +463,7 @@ func TestDoSync_WithErrors(t *testing.T) {
 
 	if err := d.Sync(ctx, time.Now().UTC(), "HEAD", syncState); err != nil {
 		// Check 1 error stats
-		checkErrorsMetrics(t, 1, 0)
+		checkSyncManifestsMetrics(t, 0, 1)
 	} else {
 		t.Error("Sync must fail because of invalid manifest")
 	}
@@ -502,7 +498,7 @@ func TestDoSync_WithErrors(t *testing.T) {
 		t.Error(err)
 	}
 	// Check 0 manifest error stats
-	checkErrorsMetrics(t, 0, 0)
+	checkSyncManifestsMetrics(t, len(expectedResourceIDs), 0)
 
 	// Emulate sync errors
 	k8s.SyncFunc = func(def cluster.SyncSet) error {
@@ -517,5 +513,5 @@ func TestDoSync_WithErrors(t *testing.T) {
 	}
 
 	// Check 2 sync error in stats
-	checkErrorsMetrics(t, 0, 2)
+	checkSyncManifestsMetrics(t, len(expectedResourceIDs)-2, 2)
 }

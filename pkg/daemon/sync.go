@@ -54,6 +54,7 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	if d.GitSecretEnabled {
 		ctxt, cancel := context.WithTimeout(ctx, d.GitTimeout)
 		if err := working.SecretUnseal(ctxt); err != nil {
+			updateSyncManifestsMetric(0, 1)
 			return err
 		}
 		cancel()
@@ -62,6 +63,7 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	// Retrieve change set of commits we need to sync
 	c, err := getChangeSet(ctx, ratchet, newRevision, d.Repo, d.GitTimeout, d.GitConfig.Paths)
 	if err != nil {
+		updateSyncManifestsMetric(0, 1)
 		return err
 	}
 
@@ -69,6 +71,7 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	syncSetName := makeGitConfigHash(d.Repo.Origin(), d.GitConfig)
 	resourceStore, err := d.getManifestStore(working)
 	if err != nil {
+		updateSyncManifestsMetric(0, 1)
 		return errors.Wrap(err, "reading the repository checkout")
 	}
 	resources, resourceErrors, err := doSync(ctx, resourceStore, d.Cluster, syncSetName, d.Logger)
@@ -150,17 +153,16 @@ func doSync(ctx context.Context, manifestsStore manifests.Store, clus cluster.Cl
 	logger log.Logger) (map[string]resource.Resource, []event.ResourceError, error) {
 	resources, err := manifestsStore.GetAllResourcesByID(ctx)
 	if err != nil {
-		errorsCountMetric.With(metrics.LabelType, "manifest").Set(1)
+		updateSyncManifestsMetric(0, 1)
 		return nil, nil, errors.Wrap(err, "loading resources from repo")
 	}
-	errorsCountMetric.With(metrics.LabelType, "manifest").Set(0)
 
 	var resourceErrors []event.ResourceError
 	if err := fluxsync.Sync(syncSetName, resources, clus); err != nil {
 		switch syncerr := err.(type) {
 		case cluster.SyncError:
 			logger.Log("err", err)
-			errorsCountMetric.With(metrics.LabelType, "sync").Set(float64(len(syncerr)))
+			updateSyncManifestsMetric(len(resources)-len(syncerr), len(syncerr))
 			for _, e := range syncerr {
 				resourceErrors = append(resourceErrors, event.ResourceError{
 					ID:    e.ResourceID,
@@ -169,13 +171,18 @@ func doSync(ctx context.Context, manifestsStore manifests.Store, clus cluster.Cl
 				})
 			}
 		default:
-			errorsCountMetric.With(metrics.LabelType, "sync").Set(1)
+			updateSyncManifestsMetric(0, 1)
 			return nil, nil, err
 		}
 	} else {
-		errorsCountMetric.With(metrics.LabelType, "sync").Set(0)
+		updateSyncManifestsMetric(len(resources), 0)
 	}
 	return resources, resourceErrors, nil
+}
+
+func updateSyncManifestsMetric(success, failure int) {
+	syncManifestsMetric.With(metrics.LabelSuccess, "true").Set(float64(success))
+	syncManifestsMetric.With(metrics.LabelSuccess, "false").Set(float64(failure))
 }
 
 // getChangedResources calculates what resources are modified during

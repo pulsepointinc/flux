@@ -8,7 +8,6 @@ const (
 	LabelRoute   = "route"
 	LabelMethod  = "method"
 	LabelSuccess = "success"
-	LabelType    = "type"
 
 	// Labels for release metrics
 	LabelAction      = "action"
