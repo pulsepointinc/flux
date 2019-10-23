@@ -14,5 +14,6 @@ The following metrics are exposed:
 | `flux_daemon_queue_duration_seconds`     | Duration of time spent in the job queue before execution
 | `flux_daemon_queue_length_count`         | Count of jobs waiting in the queue to be run
 | `flux_daemon_sync_duration_seconds`      | Duration of git-to-cluster synchronisation
+| `flux_daemon_sync_manifests`             | Number of successfully synchronized manifests, number of errors  
 | `flux_registry_fetch_duration_seconds`   | Duration of image metadata requests (from cache)
 | `flux_fluxd_connection_duration_seconds` | Duration in seconds of the current connection to fluxsvc
