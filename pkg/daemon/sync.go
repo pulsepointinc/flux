@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
-	"fmt"
 	"github.com/fluxcd/flux/pkg/metrics"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
@@ -41,15 +40,6 @@ type changeSet struct {
 }
 
 // Sync starts the synchronization of the cluster with git.
-func (d *Daemon) SyncAndMeasure(ctx context.Context, newRevision string, ratchet revisionRatchet) error {
-	started := time.Now().UTC()
-	err := d.Sync(context.Background(), started, newRevision, ratchet)
-	syncDuration.With(
-		metrics.LabelSuccess, fmt.Sprint(err == nil),
-	).Observe(time.Since(started).Seconds())
-	return err
-}
-
 func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string, ratchet revisionRatchet) error {
 	// Make a read-only clone used for this sync
 	ctxt, cancel := context.WithTimeout(ctx, d.GitTimeout)
