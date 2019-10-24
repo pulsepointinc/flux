@@ -118,22 +118,51 @@ func findMetric(name string, metricType promdto.MetricType, labels ...string) (*
 	}
 }
 
-func checkSyncManifestsMetrics(t *testing.T, success, failures int) {
+func checkSyncManifestsMetrics(t *testing.T, syncSuccess, syncFailures, manifestSuccess, manifestFailures int) {
 	if metric, err := findMetric("flux_daemon_sync_manifests", promdto.MetricType_GAUGE, "success", "true"); err != nil {
-		t.Errorf("Error collecting metrics %v", err)
-	} else if int(*metric.Gauge.Value) != success {
-		t.Errorf("Manifest success must be %v. Got %v", success, *metric.Gauge.Value)
+		t.Errorf("Error collecting flux_daemon_sync_manifests{success='true'} metric: %v", err)
+	} else if int(*metric.Gauge.Value) != manifestSuccess {
+		t.Errorf("flux_daemon_sync_manifests{success='true'} must be %v. Got %v", manifestSuccess, *metric.Gauge.Value)
 	}
 	if metric, err := findMetric("flux_daemon_sync_manifests", promdto.MetricType_GAUGE, "success", "false"); err != nil {
-		t.Errorf("Error collecting metrics %v", err)
-	} else if int(*metric.Gauge.Value) != failures {
-		t.Errorf("Manifest sync errors must be %v. Got %v", failures, *metric.Gauge.Value)
+		t.Errorf("Error collecting flux_daemon_sync_manifests{success='false'} metric: %v", err)
+	} else if int(*metric.Gauge.Value) != manifestFailures {
+		t.Errorf("flux_daemon_sync_manifests{success='false'} must be %v. Got %v", manifestFailures, *metric.Gauge.Value)
 	}
+	if metric, err := findMetric("flux_daemon_sync_duration_seconds", promdto.MetricType_HISTOGRAM, "success", "true"); err != nil {
+		if syncSuccess > 0 {
+			t.Errorf("Error collecting flux_daemon_sync_duration_seconds_count{success='true'} metric: %v", err)
+		}
+	} else if int(*metric.Histogram.SampleCount) != syncSuccess {
+		t.Errorf("flux_daemon_sync_duration_seconds_count{success='true'} must be %v. Got %v", syncSuccess, *metric.Histogram.SampleCount)
+	}
+	if metric, err := findMetric("flux_daemon_sync_duration_seconds", promdto.MetricType_HISTOGRAM, "success", "false"); err != nil {
+		if syncFailures > 0 {
+			t.Errorf("Error collecting flux_daemon_sync_duration_seconds_count{success='false'} metric: %v", err)
+		}
+	} else if int(*metric.Histogram.SampleCount) != syncFailures {
+		t.Errorf("flux_daemon_sync_duration_seconds_count{success='false'} must be %v. Got %v", syncFailures, *metric.Histogram.SampleCount)
+	}
+}
+
+func getSyncCount(t *testing.T) (success int, failure int) {
+	if metric, err := findMetric("flux_daemon_sync_duration_seconds", promdto.MetricType_HISTOGRAM, "success", "true"); err != nil {
+		success = 0
+	} else {
+		success = int(*metric.Histogram.SampleCount)
+	}
+	if metric, err := findMetric("flux_daemon_sync_duration_seconds", promdto.MetricType_HISTOGRAM, "success", "false"); err != nil {
+		failure = 0
+	} else {
+		failure = int(*metric.Histogram.SampleCount)
+	}
+	return
 }
 
 func TestPullAndSync_InitialSync(t *testing.T) {
 	d, cleanup := daemon(t)
 	defer cleanup()
+	initialSyncSuccess, initialSyncFailures := getSyncCount(t)
 
 	syncCalled := 0
 	var syncDef *cluster.SyncSet
@@ -158,7 +187,7 @@ func TestPullAndSync_InitialSync(t *testing.T) {
 	gitSync, _ := fluxsync.NewGitTagSyncProvider(d.Repo, syncTag, "", false, d.GitConfig)
 	syncState := &lastKnownSyncState{logger: d.Logger, state: gitSync}
 
-	if err := d.Sync(ctx, time.Now().UTC(), head, syncState); err != nil {
+	if err := d.SyncAndMeasure(ctx, head, syncState); err != nil {
 		t.Error(err)
 	}
 
@@ -195,7 +224,7 @@ func TestPullAndSync_InitialSync(t *testing.T) {
 	}
 
 	// Check 0 error stats
-	checkSyncManifestsMetrics(t, len(expectedResourceIDs), 0)
+	checkSyncManifestsMetrics(t, initialSyncSuccess+1, initialSyncFailures, len(expectedResourceIDs), 0)
 }
 
 func TestDoSync_NoNewCommits(t *testing.T) {
@@ -410,6 +439,8 @@ func TestDoSync_WithErrors(t *testing.T) {
 	d, cleanup := daemon(t)
 	defer cleanup()
 
+	initialSyncSuccess, initialSyncFailures := getSyncCount(t)
+
 	expectedResourceIDs := resource.IDs{}
 	for id, _ := range testfiles.ResourceMap {
 		expectedResourceIDs = append(expectedResourceIDs, id)
@@ -429,12 +460,12 @@ func TestDoSync_WithErrors(t *testing.T) {
 	gitSync, _ := fluxsync.NewGitTagSyncProvider(d.Repo, syncTag, "", false, d.GitConfig)
 	syncState := &lastKnownSyncState{logger: d.Logger, state: gitSync}
 
-	if err := d.Sync(ctx, time.Now().UTC(), head, syncState); err != nil {
+	if err := d.SyncAndMeasure(ctx, head, syncState); err != nil {
 		t.Error(err)
 	}
 
 	// Check 0 error stats
-	checkSyncManifestsMetrics(t, len(expectedResourceIDs), 0)
+	checkSyncManifestsMetrics(t, initialSyncSuccess+1, initialSyncFailures, len(expectedResourceIDs), 0)
 
 	// Now add wrong manifest
 	err = d.WithWorkingClone(ctx, func(checkout *git.Checkout) error {
@@ -461,9 +492,9 @@ func TestDoSync_WithErrors(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := d.Sync(ctx, time.Now().UTC(), "HEAD", syncState); err != nil {
-		// Check 1 error stats
-		checkSyncManifestsMetrics(t, 0, 1)
+	if err := d.SyncAndMeasure(ctx, "HEAD", syncState); err != nil {
+		// Check 1 error stats, manifest remains the same
+		checkSyncManifestsMetrics(t, initialSyncSuccess+1, initialSyncFailures+1, len(expectedResourceIDs), 0)
 	} else {
 		t.Error("Sync must fail because of invalid manifest")
 	}
@@ -494,11 +525,11 @@ func TestDoSync_WithErrors(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := d.Sync(ctx, time.Now().UTC(), "HEAD", syncState); err != nil {
+	if err := d.SyncAndMeasure(ctx, "HEAD", syncState); err != nil {
 		t.Error(err)
 	}
 	// Check 0 manifest error stats
-	checkSyncManifestsMetrics(t, len(expectedResourceIDs), 0)
+	checkSyncManifestsMetrics(t, initialSyncSuccess+2, initialSyncFailures+1, len(expectedResourceIDs), 0)
 
 	// Emulate sync errors
 	k8s.SyncFunc = func(def cluster.SyncSet) error {
@@ -508,10 +539,10 @@ func TestDoSync_WithErrors(t *testing.T) {
 		}
 	}
 
-	if err := d.Sync(ctx, time.Now().UTC(), "HEAD", syncState); err != nil {
+	if err := d.SyncAndMeasure(ctx, "HEAD", syncState); err != nil {
 		t.Error(err)
 	}
 
 	// Check 2 sync error in stats
-	checkSyncManifestsMetrics(t, len(expectedResourceIDs)-2, 2)
+	checkSyncManifestsMetrics(t, initialSyncSuccess+3, initialSyncFailures+1, len(expectedResourceIDs)-2, 2)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"github.com/fluxcd/flux/pkg/metrics"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
@@ -40,6 +41,15 @@ type changeSet struct {
 }
 
 // Sync starts the synchronization of the cluster with git.
+func (d *Daemon) SyncAndMeasure(ctx context.Context, newRevision string, ratchet revisionRatchet) error {
+	started := time.Now().UTC()
+	err := d.Sync(context.Background(), started, newRevision, ratchet)
+	syncDuration.With(
+		metrics.LabelSuccess, fmt.Sprint(err == nil),
+	).Observe(time.Since(started).Seconds())
+	return err
+}
+
 func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string, ratchet revisionRatchet) error {
 	// Make a read-only clone used for this sync
 	ctxt, cancel := context.WithTimeout(ctx, d.GitTimeout)
@@ -54,7 +64,6 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	if d.GitSecretEnabled {
 		ctxt, cancel := context.WithTimeout(ctx, d.GitTimeout)
 		if err := working.SecretUnseal(ctxt); err != nil {
-			updateSyncManifestsMetric(0, 1)
 			return err
 		}
 		cancel()
@@ -63,7 +72,6 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	// Retrieve change set of commits we need to sync
 	c, err := getChangeSet(ctx, ratchet, newRevision, d.Repo, d.GitTimeout, d.GitConfig.Paths)
 	if err != nil {
-		updateSyncManifestsMetric(0, 1)
 		return err
 	}
 
@@ -71,7 +79,6 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	syncSetName := makeGitConfigHash(d.Repo.Origin(), d.GitConfig)
 	resourceStore, err := d.getManifestStore(working)
 	if err != nil {
-		updateSyncManifestsMetric(0, 1)
 		return errors.Wrap(err, "reading the repository checkout")
 	}
 	resources, resourceErrors, err := doSync(ctx, resourceStore, d.Cluster, syncSetName, d.Logger)
@@ -153,7 +160,6 @@ func doSync(ctx context.Context, manifestsStore manifests.Store, clus cluster.Cl
 	logger log.Logger) (map[string]resource.Resource, []event.ResourceError, error) {
 	resources, err := manifestsStore.GetAllResourcesByID(ctx)
 	if err != nil {
-		updateSyncManifestsMetric(0, 1)
 		return nil, nil, errors.Wrap(err, "loading resources from repo")
 	}
 
@@ -171,7 +177,6 @@ func doSync(ctx context.Context, manifestsStore manifests.Store, clus cluster.Cl
 				})
 			}
 		default:
-			updateSyncManifestsMetric(0, 1)
 			return nil, nil, err
 		}
 	} else {
