@@ -82,6 +82,8 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	if err != nil {
 		return err
 	}
+	ctxsb, _ := context.WithTimeout(ctx, d.SyncTimeout)
+	d.K8sSyncBack.searchNonSynced(ctxsb, resources)
 
 	// Determine what resources changed during the sync
 	changedResources, err := d.getChangedResources(ctx, c, d.GitTimeout, working, resourceStore, resources)

@@ -47,6 +47,7 @@ type Daemon struct {
 	Logger                    log.Logger
 	ManifestGenerationEnabled bool
 	GitSecretEnabled          bool
+	K8sSyncBack               *K8sSyncBack  // check k8s resources are present in git
 	// bookkeeping
 	*LoopVars
 }

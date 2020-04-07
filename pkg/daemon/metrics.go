@@ -51,4 +51,11 @@ var (
 		Name:      "sync_manifests",
 		Help:      "Number of synchronized manifests",
 	}, []string{fluxmetrics.LabelSuccess})
+
+	syncBackMetric = prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+		Namespace: "flux",
+		Subsystem: "daemon",
+		Name:      "sync_back",
+		Help:      "Number of k8s resources not present in git",
+	}, []string{fluxmetrics.LabelName})
 )
