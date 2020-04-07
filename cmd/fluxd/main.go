@@ -139,11 +139,14 @@ func main() {
 		gitVerifySignaturesModeStr = fs.String("git-verify-signatures-mode", fluxsync.VerifySignaturesModeDefault, fmt.Sprintf("if git-verify-signatures is set, which strategy to use for signature verification (one of %s)", strings.Join([]string{fluxsync.VerifySignaturesModeNone, fluxsync.VerifySignaturesModeAll, fluxsync.VerifySignaturesModeFirstParent}, ",")))
 
 		// syncing
-		syncInterval = fs.Duration("sync-interval", 5*time.Minute, "apply config in git to cluster at least this often, even if there are no new commits")
-		syncTimeout  = fs.Duration("sync-timeout", 1*time.Minute, "duration after which sync operations time out")
-		syncGC       = fs.Bool("sync-garbage-collection", false, "delete resources that were created by fluxd, but are no longer in the git repo")
-		dryGC        = fs.Bool("sync-garbage-collection-dry", false, "only log what would be garbage collected, rather than deleting. Implies --sync-garbage-collection")
-		syncState    = fs.String("sync-state", fluxsync.GitTagStateMode, fmt.Sprintf("method used by flux for storing state (one of {%s})", strings.Join([]string{fluxsync.GitTagStateMode, fluxsync.NativeStateMode}, ",")))
+		syncInterval     = fs.Duration("sync-interval", 5*time.Minute, "apply config in git to cluster at least this often, even if there are no new commits")
+		syncTimeout      = fs.Duration("sync-timeout", 1*time.Minute, "duration after which sync operations time out")
+		syncBackInterval = fs.Duration("sync-back-interval", 60*time.Minute, "duration after which k8s manifests are synced back with GIT")
+		syncBackTypes    = fs.StringSlice("sync-back-type", daemon.K8sManagerNames, "objects to checked in k8s")
+		syncBackIgnore   = fs.StringSlice("sync-back-ignore", []string{"kube-system:Pod/(?:etcd-server|kube-apiserver|kube-controller-manager|kube-scheduler)-.*",}, "objects to ignore in k8s")
+		syncGC           = fs.Bool("sync-garbage-collection", false, "delete resources that were created by fluxd, but are no longer in the git repo")
+		dryGC            = fs.Bool("sync-garbage-collection-dry", false, "only log what would be garbage collected, rather than deleting. Implies --sync-garbage-collection")
+		syncState        = fs.String("sync-state", fluxsync.GitTagStateMode, fmt.Sprintf("method used by flux for storing state (one of {%s})", strings.Join([]string{fluxsync.GitTagStateMode, fluxsync.NativeStateMode}, ",")))
 
 		// registry
 		memcachedHostname = fs.String("memcached-hostname", "memcached", "hostname for memcached service.")
@@ -720,6 +723,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	k8sSyncBack, err := daemon.K8sSyncBackInit(logger, *syncBackInterval, *syncBackTypes, *syncBackIgnore)
+	if err != nil {
+		logger.Log("error", "can't init k8s sync back", err)
+		os.Exit(1)
+	}
+
 	daemon := &daemon.Daemon{
 		V:                         version,
 		Cluster:                   k8s,
@@ -742,6 +751,7 @@ func main() {
 			GitVerifySignaturesMode: gitVerifySignaturesMode,
 			ImageScanDisabled:       *registryDisableScanning,
 		},
+		K8sSyncBack: k8sSyncBack,
 	}
 
 	{
