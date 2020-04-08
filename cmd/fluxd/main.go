@@ -431,6 +431,7 @@ func main() {
 	var clusterVersion string
 	var sshKeyRing ssh.KeyRing
 	var k8s cluster.Cluster
+	var k8sClient *k8sclient.Clientset
 	var k8sManifests manifests.Manifests
 	var imageCreds func() registry.ImageCreds
 	{
@@ -439,6 +440,7 @@ func main() {
 			logger.Log("err", err)
 			os.Exit(1)
 		}
+		k8sClient = clientset
 		dynamicClientset, err := k8sclientdynamic.NewForConfig(restClientConfig)
 		if err != nil {
 			logger.Log("err", err)
@@ -723,7 +725,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	k8sSyncBack, err := daemon.K8sSyncBackInit(logger, *syncBackInterval, *syncBackTypes, *syncBackIgnore)
+	k8sSyncBack, err := daemon.K8sSyncBackInit(logger, k8sClient, *syncBackInterval, *syncBackTypes, *syncBackIgnore)
 	if err != nil {
 		logger.Log("error", "can't init k8s sync back", err)
 		os.Exit(1)

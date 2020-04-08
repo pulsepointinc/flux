@@ -7,11 +7,11 @@ import (
 
 	"github.com/fluxcd/flux/pkg/metrics"
 	"github.com/fluxcd/flux/pkg/resource"
+	clusterResource "github.com/fluxcd/flux/pkg/cluster/kubernetes/resource"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 type k8sResourceCheckFunc func(*K8sSyncBack, map[string]resource.Resource, *[]resource.ID) error
@@ -81,15 +81,8 @@ var (
 	}
 )
 
-func K8sSyncBackInit(logger log.Logger, syncBackInterval time.Duration, syncBackTypes []string, syncBackIgnore []string) (*K8sSyncBack, error) {
-	k8sConfig, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-	kubeClient, err := kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		return nil, err
-	}
+func K8sSyncBackInit(logger log.Logger, kubeClient *kubernetes.Clientset, syncBackInterval time.Duration, syncBackTypes []string, syncBackIgnore []string) (*K8sSyncBack, error) {
+	var err error
 	ignoredResources := make([]*regexp.Regexp, len(syncBackIgnore), len(syncBackIgnore))
 	for idx, ignoreStr := range syncBackIgnore {
 		if ignoredResources[idx], err = regexp.Compile(ignoreStr); err != nil {
@@ -308,8 +301,11 @@ func addIfNotOwned(sync *K8sSyncBack, fluxResources map[string]resource.Resource
 	if len(ownerReferences) > 0 {
 		return
 	}
-
-	resourceID := resource.MakeID(meta.Namespace, k8sType, meta.Name)
+	namespace := meta.Namespace
+	if len(namespace) == 0 {
+		namespace = clusterResource.ClusterScope
+	}
+	resourceID := resource.MakeID(namespace, k8sType, meta.Name)
 	resourceIdStr := resourceID.String()
 	if _, ok := fluxResources[resourceIdStr]; !ok {
 		for _, ignoreRegexp := range sync.ignoredResources {
