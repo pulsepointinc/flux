@@ -143,7 +143,7 @@ func main() {
 		syncTimeout      = fs.Duration("sync-timeout", 1*time.Minute, "duration after which sync operations time out")
 		syncBackInterval = fs.Duration("sync-back-interval", 60*time.Minute, "duration after which k8s manifests are synced back with GIT")
 		syncBackTypes    = fs.StringSlice("sync-back-type", daemon.K8sManagerNames, "objects to checked in k8s")
-		syncBackIgnore   = fs.StringSlice("sync-back-ignore", []string{"kube-system:Pod/(?:etcd-server|kube-apiserver|kube-controller-manager|kube-scheduler)-.*",}, "objects to ignore in k8s")
+		syncBackIgnore   = fs.StringSlice("sync-back-ignore", []string{"kube-system:pod/(?:etcd-server|kube-apiserver|kube-controller-manager|kube-scheduler)-.*",".*:serviceaccount/default"}, "objects to ignore in k8s")
 		syncGC           = fs.Bool("sync-garbage-collection", false, "delete resources that were created by fluxd, but are no longer in the git repo")
 		dryGC            = fs.Bool("sync-garbage-collection-dry", false, "only log what would be garbage collected, rather than deleting. Implies --sync-garbage-collection")
 		syncState        = fs.String("sync-state", fluxsync.GitTagStateMode, fmt.Sprintf("method used by flux for storing state (one of {%s})", strings.Join([]string{fluxsync.GitTagStateMode, fluxsync.NativeStateMode}, ",")))
