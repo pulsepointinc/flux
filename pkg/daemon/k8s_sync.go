@@ -5,11 +5,12 @@ import (
 	"regexp"
 	"time"
 
+	clusterResource "github.com/fluxcd/flux/pkg/cluster/kubernetes/resource"
 	"github.com/fluxcd/flux/pkg/metrics"
 	"github.com/fluxcd/flux/pkg/resource"
-	clusterResource "github.com/fluxcd/flux/pkg/cluster/kubernetes/resource"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -104,6 +105,7 @@ func K8sSyncBackInit(logger log.Logger, kubeClient *kubernetes.Clientset, syncBa
 		resourceManagers: resourceManagers,
 		kubeClient:       kubeClient,
 	}
+	prometheus.MustRegister(syncBackMetric)
 	return sync, nil
 }
 
@@ -116,8 +118,9 @@ func (sync *K8sSyncBack) searchNonSynced(ctx context.Context, resources map[stri
 
 	notOwnedResources := sync.readNotOwnedResources(resources)
 
+	syncBackMetric.Reset()
 	for _, resourceID := range notOwnedResources {
-		syncBackMetric.With(metrics.LabelName, resourceID.String()).Set(1)
+		syncBackMetric.With(prometheus.Labels{metrics.LabelName: resourceID.String()}).Set(1)
 	}
 }
 

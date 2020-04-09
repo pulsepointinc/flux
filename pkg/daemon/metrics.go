@@ -5,6 +5,7 @@ import (
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 
 	fluxmetrics "github.com/fluxcd/flux/pkg/metrics"
+	prometheuscore "github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -52,7 +53,7 @@ var (
 		Help:      "Number of synchronized manifests",
 	}, []string{fluxmetrics.LabelSuccess})
 
-	syncBackMetric = prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+	syncBackMetric = prometheuscore.NewGaugeVec(stdprometheus.GaugeOpts{
 		Namespace: "flux",
 		Subsystem: "daemon",
 		Name:      "sync_back",
