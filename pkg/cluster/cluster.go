@@ -32,6 +32,7 @@ type Cluster interface {
 	Export(ctx context.Context) ([]byte, error)
 	Sync(SyncSet) error
 	PublicSSHKey(regenerate bool) (ssh.PublicKey, error)
+	UnmanagedResources() []resource.ID
 }
 
 // RolloutStatus describes numbers of pods in different states and

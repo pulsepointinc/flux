@@ -8,6 +8,8 @@ import (
 	"github.com/fluxcd/flux/pkg/metrics"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"path/filepath"
 	"time"
 
@@ -177,6 +179,9 @@ func doSync(ctx context.Context, manifestsStore manifests.Store, clus cluster.Cl
 			return nil, nil, err
 		}
 	} else {
+		fmt.Println("Show unmanaged...")
+		logger.Log("Show unmanaged...")
+		updateSyncBackMetrics(clus.UnmanagedResources())
 		updateSyncManifestsMetric(len(resources), 0)
 	}
 	return resources, resourceErrors, nil
@@ -185,6 +190,14 @@ func doSync(ctx context.Context, manifestsStore manifests.Store, clus cluster.Cl
 func updateSyncManifestsMetric(success, failure int) {
 	syncManifestsMetric.With(metrics.LabelSuccess, "true").Set(float64(success))
 	syncManifestsMetric.With(metrics.LabelSuccess, "false").Set(float64(failure))
+}
+
+func updateSyncBackMetrics(unmanagedResources []resource.ID) {
+	syncBackMetric.Reset()
+	for _, resourceID := range unmanagedResources {
+		fmt.Println("Unmanaged", resourceID.String())
+		syncBackMetric.With(prometheus.Labels{metrics.LabelName: resourceID.String()}).Set(1)
+	}
 }
 
 // getChangedResources calculates what resources are modified during

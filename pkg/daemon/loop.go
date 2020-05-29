@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/fluxcd/flux/pkg/git"
 	fluxmetrics "github.com/fluxcd/flux/pkg/metrics"
@@ -69,6 +70,10 @@ func (d *Daemon) Loop(stop chan struct{}, wg *sync.WaitGroup, logger log.Logger)
 	// Ask for a sync, and to check
 	d.AskForSync()
 	d.AskForAutomatedWorkloadImageUpdates()
+
+	if d.SyncBack {
+		prometheus.MustRegister(syncBackMetric)
+	}
 
 	for {
 		select {

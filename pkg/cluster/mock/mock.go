@@ -27,6 +27,7 @@ type Mock struct {
 	CreateManifestPatchFunc       func(originalManifests, modifiedManifests []byte, originalSource, modifiedSource string) ([]byte, error)
 	ApplyManifestPatchFunc        func(originalManifests, patch []byte, originalSource, patchSource string) ([]byte, error)
 	AppendManifestToBufferFunc    func([]byte, *bytes.Buffer) error
+	UnmanagedResourcesFunc        func() []resource.ID
 }
 
 var _ cluster.Cluster = &Mock{}
@@ -86,4 +87,8 @@ func (m *Mock) ApplyManifestPatch(originalManifests, patch []byte, originalSourc
 
 func (m *Mock) AppendManifestToBuffer(b []byte, buf *bytes.Buffer) error {
 	return m.AppendManifestToBuffer(b, buf)
+}
+
+func (m *Mock) UnmanagedResources() []resource.ID {
+	return m.UnmanagedResourcesFunc()
 }
