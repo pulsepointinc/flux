@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sync"
 
 	hrclient "github.com/fluxcd/helm-operator/pkg/client/clientset/versioned"
@@ -45,6 +46,26 @@ func MakeClusterClientset(core coreClient, dyn dynamicClient,
 		discoveryClient:    disco,
 	}
 }
+
+var (
+	K8sManagerNames = []string{
+		"Pod",
+		"Deployment",
+		"StatefulSet",
+		"DaemonSet",
+		"ReplicaSet",
+		"CronJob",
+		"ConfigMap",
+		"Ingress",
+		"Service",
+		"RoleBinding",
+		"Role",
+		"ClusterRoleBinding",
+		"ClusterRole",
+		"ServiceAccount",
+		"Namespace",
+	}
+)
 
 // --- add-ons
 
@@ -109,13 +130,33 @@ type Cluster struct {
 	imageIncluder       cluster.Includer
 	resourceExcludeList []string
 	mu                  sync.Mutex
+
+	syncBackTypes      map[string]bool
+	syncBackIgnore     []*regexp.Regexp	// todo use multiple regexp - kind of aho corasik
+	unmanagedResources []resource.ID
 }
 
 // NewCluster returns a usable cluster.
-func NewCluster(client ExtendedClient, applier Applier, sshKeyRing ssh.KeyRing, logger log.Logger, allowedNamespaces map[string]struct{}, imageIncluder cluster.Includer, resourceExcludeList []string) *Cluster {
+func NewCluster(client ExtendedClient, applier Applier, sshKeyRing ssh.KeyRing, logger log.Logger,
+	allowedNamespaces map[string]struct{}, imageIncluder cluster.Includer, resourceExcludeList []string,
+	syncBackTypesArr []string, syncBackIgnoreArr []string) *Cluster {
 	if imageIncluder == nil {
 		imageIncluder = cluster.AlwaysInclude
 	}
+
+	syncBackTypes := make(map[string]bool, len(syncBackTypesArr))
+	for _, syncBackType := range syncBackTypesArr {
+		syncBackTypes[syncBackType] = true
+	}
+	syncBackIgnore := make([]*regexp.Regexp, 0, len(syncBackIgnoreArr))
+	for _, ignoredResourceStr := range syncBackIgnoreArr {
+		if ignoredResourceRegex, err := regexp.Compile(ignoredResourceStr); err == nil {
+			syncBackIgnore = append(syncBackIgnore, ignoredResourceRegex)
+		} else {
+			logger.Log("Error compiling ignore regex '%v' %v", ignoredResourceStr, err)
+		}
+	}
+
 
 	c := &Cluster{
 		client:              client,
@@ -126,6 +167,8 @@ func NewCluster(client ExtendedClient, applier Applier, sshKeyRing ssh.KeyRing, 
 		loggedAllowedNS:     map[string]bool{},
 		imageIncluder:       imageIncluder,
 		resourceExcludeList: resourceExcludeList,
+		syncBackTypes:       syncBackTypes,
+		syncBackIgnore:      syncBackIgnore,
 	}
 
 	return c
@@ -369,6 +412,34 @@ func (c *Cluster) IsAllowedResource(id resource.ID) bool {
 
 	_, ok := c.allowedNamespaces[namespaceToCheck]
 	return ok
+}
+
+func (c *Cluster) isUnmanagedResource(kuberes *kuberesource) bool {
+	// Add-on or Default service account
+	if isAddon(kuberes.obj) || (kuberes.obj.GetKind() == "ServiceAccount" && kuberes.obj.GetName() == "default") {
+		return true
+	}
+	// todo think about endpoints - kuberes.obj.GetKind() == "Endpoints"
+
+	idStr := kuberes.ResourceID().String()
+	for _, ignoreRegex := range c.syncBackIgnore {
+		if ignoreRegex.MatchString(idStr) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Cluster) setUnmanagedResources(unmanagedResourcesMap map[resource.ID]bool) {
+	unmanagedResources := make([]resource.ID, 0, len(unmanagedResourcesMap))
+	for resourceID := range unmanagedResourcesMap {
+		unmanagedResources = append(unmanagedResources, resourceID)
+	}
+	c.unmanagedResources = unmanagedResources
+}
+
+func (c *Cluster) UnmanagedResources() []resource.ID {
+	return c.unmanagedResources
 }
 
 type yamlThroughJSON struct {

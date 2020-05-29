@@ -59,12 +59,19 @@ func (c *Cluster) Sync(syncSet cluster.SyncSet) error {
 	if err != nil {
 		return errors.Wrap(err, "collating resources in cluster for sync")
 	}
+	unmanagedResources := make(map[resource.ID]bool)
+	for _, kubres := range clusterResources {
+		if !c.isUnmanagedResource(kubres) {
+			unmanagedResources[kubres.ResourceID()] = true
+		}
+	}
 
 	cs := makeChangeSet()
 	var errs cluster.SyncError
 	var excluded []string
 	for _, res := range syncSet.Resources {
 		resID := res.ResourceID()
+		delete(unmanagedResources, resID)
 		id := resID.String()
 		if !c.IsAllowedResource(resID) {
 			excluded = append(excluded, id)
@@ -108,7 +115,7 @@ func (c *Cluster) Sync(syncSet cluster.SyncSet) error {
 	c.muSyncErrors.RUnlock()
 
 	if c.GC || c.DryGC {
-		deleteErrs, gcFailure := c.collectGarbage(syncSet, checksums, logger, c.DryGC)
+		deleteErrs, gcFailure := c.collectGarbage(syncSet, unmanagedResources, checksums, logger, c.DryGC)
 		if gcFailure != nil {
 			return gcFailure
 		}
@@ -123,11 +130,13 @@ func (c *Cluster) Sync(syncSet cluster.SyncSet) error {
 	// It is expected that Cluster.Sync is invoked with *all* resources.
 	// Otherwise it will override previously recorded sync errors.
 	c.setSyncErrors(errs)
+	c.setUnmanagedResources(unmanagedResources)
 	return errs
 }
 
 func (c *Cluster) collectGarbage(
 	syncSet cluster.SyncSet,
+	unmanagedResources map[resource.ID]bool,
 	checksums map[string]string,
 	logger log.Logger,
 	dryRun bool) (cluster.SyncError, error) {
@@ -158,6 +167,7 @@ func (c *Cluster) collectGarbage(
 
 			c.logger.Log("info", "cluster resource not in resources to be synced; deleting", "dry-run", dryRun, "resource", resourceID)
 			if !dryRun {
+				delete(unmanagedResources, res.ResourceID())
 				orphanedResources.stage("delete", res.ResourceID(), "<cluster>", res.IdentifyingBytes())
 			}
 		case actual != expected:
