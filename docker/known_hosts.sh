@@ -49,6 +49,7 @@ diff - "$fingerprints" <<EOF
 256 SHA256:AGvEpqYNMqsRNIviwyk4J4HM0lEylomDBKOWZsBn434 [source.developers.google.com]:2022 (ECDSA)
 256 SHA256:HbW3g8zUjNSksFbqTiUWPWg2Bq1x8xdGUrliXFzSnUw gitlab.com (ECDSA)
 256 SHA256:eUXGGm1YGsMAS7vkcx6JOJdOGHPem5gQp4taiCfCLB8 gitlab.com (ED25519)
+3072 SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s github.com (RSA)
 EOF
 
 }
