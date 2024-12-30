@@ -14,8 +14,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"time"
-
 	"github.com/fluxcd/flux/pkg/cluster"
 	"github.com/fluxcd/flux/pkg/event"
 	"github.com/fluxcd/flux/pkg/git"
