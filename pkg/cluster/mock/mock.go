@@ -82,11 +82,11 @@ func (m *Mock) CreateManifestPatch(originalManifests, modifiedManifests []byte, 
 }
 
 func (m *Mock) ApplyManifestPatch(originalManifests, patch []byte, originalSource, patchSource string) ([]byte, error) {
-	return m.ApplyManifestPatch(originalManifests, patch, originalSource, patchSource)
+	return m.ApplyManifestPatchFunc(originalManifests, patch, originalSource, patchSource)
 }
 
 func (m *Mock) AppendManifestToBuffer(b []byte, buf *bytes.Buffer) error {
-	return m.AppendManifestToBuffer(b, buf)
+	return m.AppendManifestToBufferFunc(b, buf)
 }
 
 func (m *Mock) UnmanagedResources() []resource.ID {

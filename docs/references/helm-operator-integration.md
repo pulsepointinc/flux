@@ -1,5 +1,13 @@
 # Integration with the Helm Operator
 
+> **🛑 Upgrade Advisory**
+>
+> This documentation is for Flux (v1) which has [reached its end-of-life in November 2022](https://fluxcd.io/blog/2022/10/september-2022-update/#flux-legacy-v1-retirement-plan).
+>
+> We strongly recommend you familiarise yourself with the newest Flux and [migrate as soon as possible](https://fluxcd.io/flux/migration/).
+>
+> For documentation regarding the latest Flux, please refer to [this section](https://fluxcd.io/flux/).
+
 You can release charts to your cluster via "GitOps", by combining Flux
 and the [Helm Operator](https://github.com/fluxcd/helm-operator).
 
@@ -16,7 +24,8 @@ If the chart you're using in a `HelmRelease` lets you specify the
 particular images to run, you will usually be able to update them with
 Flux, the same way you can with Deployments and so on.
 
-> **Note:** for automation to work, the repository _and_ tag should be
+> ⚠ Note:
+> For automation to work, the repository _and_ tag should be
 > defined (either as a whole string, or under separate keys), as Flux
 > determines image updates based on what it reads in the `.spec.values`
 > of the `HelmRelease`.
@@ -93,10 +102,15 @@ is required for any of these to take effect.
 
 | Annotation                         | Value            | Required? |
 |------------------------------------|------------------|   :---:   |
+| **`fluxcd.io/automated`**          | `"true"`         |     ✅ <br> * Note: This must be a string `"true"` <br> rather than a boolean `true` or all other `*.fluxcd.io/*` <br> annotations will be silently ignored    |
 | **`repository.fluxcd.io/<alias>`** | `sub.repo`       |     ✅    |
 | `registry.fluxcd.io/<alias>`       | `sub.reg`        |           |
 | `tag.fluxcd.io/<alias>`            | `sub.tag`        |           |
-| `filter.fluxcd.io/<alias>`         | `glob: master-*` |           |
+| `filter.fluxcd.io/<alias>`         | `glob:master-*`  |           |
+
+
+> ⚠ Note:
+> Glob patterns following `glob:` are sensitive to spaces
 
 The following example `HelmRelease` specifies two images:
 
@@ -106,7 +120,7 @@ metadata:
     # image and tag
     repository.fluxcd.io/app: appImage
     tag.fluxcd.io/app: appTag
-    filter.fluxcd.io/app: 'glob: *'
+    filter.fluxcd.io/app: 'glob:*'
     # nested image with registry and tag
     registry.fluxcd.io/submarine: sub.marinesystem.reg
     repository.fluxcd.io/submarine: sub.marinesystem.img

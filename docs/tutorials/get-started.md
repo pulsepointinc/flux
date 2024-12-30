@@ -1,12 +1,21 @@
 # Get started with Flux
 
+> **🛑 Upgrade Advisory**
+>
+> This documentation is for Flux (v1) which has [reached its end-of-life in November 2022](https://fluxcd.io/blog/2022/10/september-2022-update/#flux-legacy-v1-retirement-plan).
+>
+> We strongly recommend you familiarise yourself with the newest Flux and [migrate as soon as possible](https://fluxcd.io/flux/migration/).
+>
+> For documentation regarding the latest Flux, please refer to [this section](https://fluxcd.io/flux/).
+
 This short guide shows a self-contained example of Flux and just
 takes a couple of minutes to get set up. By the end you will
 have Flux running in your cluster and it will be deploying any
 code changes for you.
 
-> **Note:** If you would like to install Flux using Helm, refer to the
-> [Helm section](get-started-helm.md).
+> ⚠ Note:
+> If you would like to install Flux using Helm, refer to the [Helm
+> section](get-started-helm.md).
 
 ## Prerequisites
 
@@ -82,7 +91,8 @@ for more info on how to manage deploy keys.
 `https://github.com/YOURUSER/flux-get-started/settings/keys/new` and
 paste the key there.)
 
-> **Note:** the SSH key must be configured to have R/W access to the
+> ⚠ Note:
+> The SSH key must be configured to have R/W access to the
 > repository. More specifically, the SSH key must be able to create
 > and update tags. E.g. in Gitlab, that means it requires `Maintainer`
 > permissions. The `Developer` permission can create tags, but not
@@ -96,7 +106,7 @@ change its configuration to use a different message.
 Replace `YOURUSER` in
 `https://github.com/YOURUSER/flux-get-started/blob/master/workloads/podinfo-dep.yaml`
 with your GitHub ID), open the URL in your browser, edit the file,
-change the `PODINFO_UI_MESSAGE` env var to `Welcome to Flux` and commit the file.
+add `--ui-message='Welcome to Flux'` to the container command and commit the file.
 
 By default, Flux git pull frequency is set to 5 minutes.
 You can tell Flux to sync the changes immediately with:

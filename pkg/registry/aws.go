@@ -23,7 +23,9 @@ import (
 
 const (
 	// For recognising ECR hosts
-	ecrHostSuffix = ".amazonaws.com"
+	awsPartitionSuffix   = ".amazonaws.com"
+	awsCnPartitionSuffix = ".amazonaws.com.cn"
+
 	// How long AWS tokens remain valid, according to AWS docs; this
 	// is used as an upper bound, overridden by any sooner expiry
 	// returned in the API response.
@@ -31,7 +33,8 @@ const (
 	// how long to skip refreshing a region after we've failed
 	embargoDuration = 10 * time.Minute
 
-	EKS_SYSTEM_ACCOUNT = "602401143452"
+	EKS_SYSTEM_ACCOUNT    = "602401143452"
+	EKS_SYSTEM_ACCOUNT_CN = "918309763551"
 )
 
 // AWSRegistryConfig supplies constraints for scanning AWS (ECR) image
@@ -47,6 +50,16 @@ func contains(strs []string, str string) bool {
 		if s == str {
 			return true
 		}
+	}
+	return false
+}
+
+func validECRHost(domain string) bool {
+	switch {
+	case strings.HasSuffix(domain, awsPartitionSuffix):
+		return true
+	case strings.HasSuffix(domain, awsCnPartitionSuffix):
+		return true
 	}
 	return false
 }
@@ -107,27 +120,30 @@ func ImageCredsWithAWSAuth(lookup func() ImageCreds, logger log.Logger, config A
 					"exclude-ids", fmt.Sprintf("%v", config.BlockIDs))
 			}()
 
-			// This forces the AWS SDK to load config, so we can get
-			// the default region if it's there.
-			sess := session.Must(session.NewSessionWithOptions(session.Options{
-				SharedConfigState: session.SharedConfigEnable,
-			}))
-			// Always try to connect to the metadata service, so we
-			// can fail fast if it's not available.
-			ec2 := ec2metadata.New(sess)
-			metadataRegion, err := ec2.Region()
-			if err != nil {
-				preflightErr = err
-				if config.Regions == nil {
-					config.Regions = []string{}
+			if config.Regions != nil {
+				okToUseAWS = true
+				logger.Log("info", "using regions from local config")
+			} else {
+				// This forces the AWS SDK to load config, so we can get
+				// the default region if it's there.
+				sess := session.Must(session.NewSessionWithOptions(session.Options{
+					SharedConfigState: session.SharedConfigEnable,
+				}))
+				// Always try to connect to the metadata service, so we
+				// can fail fast if it's not available.
+				ec2 := ec2metadata.New(sess)
+				metadataRegion, err := ec2.Region()
+				if err != nil {
+					preflightErr = err
+					if config.Regions == nil {
+						config.Regions = []string{}
+					}
+					logger.Log("error", "fetching region for AWS", "err", err)
+					return
 				}
-				logger.Log("error", "fetching region for AWS", "err", err)
-				return
-			}
 
-			okToUseAWS = true
+				okToUseAWS = true
 
-			if config.Regions == nil {
 				clusterRegion := *sess.Config.Region
 				regionSource := "local config"
 				if clusterRegion == "" {
@@ -213,38 +229,40 @@ func ImageCredsWithAWSAuth(lookup func() ImageCreds, logger log.Logger, config A
 
 		for name, creds := range imageCreds {
 			domain := name.Domain
-			if strings.HasSuffix(domain, ecrHostSuffix) {
-				bits := strings.Split(domain, ".")
-				if len(bits) != 6 || bits[1] != "dkr" || bits[2] != "ecr" {
-					logger.Log("warning", "AWS registry domain not in expected format <account-id>.dkr.ecr.<region>.amazonaws.com", "domain", domain)
-					continue
-				}
-				accountID := bits[0]
-				region := bits[3]
+			if !validECRHost(domain) {
+				continue
+			}
 
-				// Before deciding whether an image is included, we need to establish the included regions,
-				// and whether we can use the AWS API to get credentials. But we don't need to log any problem
-				// that arises _unless_ there's an image that ends up being included in the scanning.
-				preflightErr := preflight()
+			bits := strings.Split(domain, ".")
+			if bits[1] != "dkr" || bits[2] != "ecr" {
+				logger.Log("warning", "AWS registry domain not in expected format <account-id>.dkr.ecr.<region>.amazonaws.<extension>", "domain", domain)
+				continue
+			}
+			accountID := bits[0]
+			region := bits[3]
 
-				if !shouldScan(region, accountID) {
-					delete(imageCreds, name)
-					continue
-				}
+			// Before deciding whether an image is included, we need to establish the included regions,
+			// and whether we can use the AWS API to get credentials. But we don't need to log any problem
+			// that arises _unless_ there's an image that ends up being included in the scanning.
+			preflightErr := preflight()
 
-				if preflightErr != nil {
-					logger.Log("warning", "AWS auth implied by ECR image, but AWS API is not available. You can ignore this if you are providing credentials some other way (e.g., through imagePullSecrets)", "image", name.String(), "err", preflightErr)
-				}
+			if !shouldScan(region, accountID) {
+				delete(imageCreds, name)
+				continue
+			}
 
-				if okToUseAWS {
-					if err := ensureCreds(domain, region, accountID, time.Now()); err != nil {
-						logger.Log("warning", "unable to ensure credentials for ECR", "domain", domain, "err", err)
-					}
-					newCreds := NoCredentials()
-					newCreds.Merge(awsCreds)
-					newCreds.Merge(creds)
-					imageCreds[name] = newCreds
+			if preflightErr != nil {
+				logger.Log("warning", "AWS auth implied by ECR image, but AWS API is not available. You can ignore this if you are providing credentials some other way (e.g., through imagePullSecrets)", "image", name.String(), "err", preflightErr)
+			}
+
+			if okToUseAWS {
+				if err := ensureCreds(domain, region, accountID, time.Now()); err != nil {
+					logger.Log("warning", "unable to ensure credentials for ECR", "domain", domain, "err", err)
 				}
+				newCreds := NoCredentials()
+				newCreds.Merge(awsCreds)
+				newCreds.Merge(creds)
+				imageCreds[name] = newCreds
 			}
 		}
 		return imageCreds

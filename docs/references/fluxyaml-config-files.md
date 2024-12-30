@@ -1,12 +1,21 @@
-# Manifest generation through `.flux.yaml` configuration files
+# Manifest generation through .flux.yaml configuration files
+
+> **🛑 Upgrade Advisory**
+>
+> This documentation is for Flux (v1) which has [reached its end-of-life in November 2022](https://fluxcd.io/blog/2022/10/september-2022-update/#flux-legacy-v1-retirement-plan).
+>
+> We strongly recommend you familiarise yourself with the newest Flux and [migrate as soon as possible](https://fluxcd.io/flux/migration/).
+>
+> For documentation regarding the latest Flux, please refer to [this section](https://fluxcd.io/flux/).
 
 This feature lets you generate Kubernetes manifests with a program,
 instead of having to include them in your git repo as YAML files. For
 example, you can use `kustomize` to patch a common set of resources to
 suit a particular environment.
 
-> Note: For a full, self-contained example of Flux generating manifests
-> with `kustomize` you can go to [https://github.com/fluxcd/flux-kustomize-example](https://github.com/fluxcd/flux-kustomize-example)
+> ⚠ Note:
+> For a full, self-contained example of Flux generating manifests
+with `kustomize` you can go to [https://github.com/fluxcd/flux-kustomize-example](https://github.com/fluxcd/flux-kustomize-example)
 
 Manifest generation is controlled by the flags given to `fluxd`, and
 `.flux.yaml` files in your git repo.
@@ -128,7 +137,7 @@ scanForFiles: {}
 
 This is to account for the case in which you have a `.flux.yaml`
 higher in the directory tree, applying to several target paths beneath
-it, but want to have a directory wth regular YAMLs as well.
+it, but want to have a directory with regular YAMLs as well.
 
 In the following example, the top-level `.flux.yaml` would take effect
 for `--git-path=staging` or `--git-path=production`.
@@ -241,8 +250,10 @@ gives a path, relative to the target path, in which to record
 patches. `fluxd` will create or update the file when needed, and
 commit any changes it makes to git.
 
-> Note: at present, it is necessary to manually remove patches that
-> refer to deleted manifests. See [issue #2428][#2428]
+> ⚠ Note:
+> At present, it is necessary to manually remove patches that
+refer to deleted manifests. See [issue
+#2428](https://github.com/fluxcd/flux/issues/2428)).
 
 ### Using command-updated configuration
 
@@ -346,6 +357,5 @@ command: context deadline exceeded`, you can increase the timeout with
 the `--sync-timeout` fluxd command flag or the `sync.timeout` Helm
 chart option.
 
-[#2428]: https://github.com/fluxcd/flux/issues/2428
 [flux-dockerfile]: https://github.com/fluxcd/flux/blob/master/docker/Dockerfile.flux
 [strategic-merge]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md

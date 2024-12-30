@@ -3,8 +3,17 @@ Get the Git deploy key by either (a) running
   kubectl -n {{ .Release.Namespace }} logs deployment/{{ .Release.Name }} | grep identity.pub | cut -d '"' -f2
 
 or by (b) installing fluxctl through
-https://docs.fluxcd.io/en/latest/references/fluxctl#installing-fluxctl
+https://fluxcd.io/legacy/flux/references/fluxctl/#installing-fluxctl
 and running:
 
   fluxctl identity --k8s-fwd-ns {{ .Release.Namespace }}
 
+---
+
+**Flux v1 is deprecated, please upgrade to v2 as soon as possible!**
+
+New users of Flux can Get Started here:
+https://fluxcd.io/flux/get-started/
+
+Existing users can upgrade using the Migration Guide:
+https://fluxcd.io/flux/migration/

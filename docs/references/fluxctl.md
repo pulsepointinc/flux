@@ -1,4 +1,12 @@
-# `fluxctl`
+# fluxctl
+
+> **🛑 Upgrade Advisory**
+>
+> This documentation is for Flux (v1) which has [reached its end-of-life in November 2022](https://fluxcd.io/blog/2022/10/september-2022-update/#flux-legacy-v1-retirement-plan).
+>
+> We strongly recommend you familiarise yourself with the newest Flux and [migrate as soon as possible](https://fluxcd.io/flux/migration/).
+>
+> For documentation regarding the latest Flux, please refer to [this section](https://fluxcd.io/flux/).
 
 `fluxctl` provides an API that can be used from the command line.
 
@@ -25,13 +33,13 @@ date.
 To install it, simply run:
 
 ```sh
-sudo snap install fluxctl
+sudo snap install fluxctl --classic
 ```
 
 If you would prefer to track builds from master, run
 
 ```sh
-sudo snap install fluxctl --edge
+sudo snap install fluxctl --edge --classic
 ```
 
 instead.
@@ -468,8 +476,10 @@ started with several flags that impact the commit information:
 
 Actions triggered by a user through the CLI `fluxctl`
 tool, can have the commit author information customized. This is handy for providing extra context in the
-notifications and history. Whether the customization is possible, depends on the Flux daemon (`fluxd`)
-`git-set-author` flag. If set, the commit author will be customized in the following way:
+notifications and history.  Whether the customization is possible, depends on the Flux daemon (`fluxd`) `git-set-author` flag.
+If set, the commit author will be customized in the following way: the author
+of git commits will reflect the user who initiated the commit and will differ
+from the git committer.
 
 ## Image Tag Filtering
 

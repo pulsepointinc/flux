@@ -1,4 +1,12 @@
-# Daemon (`fluxd`)
+# Daemon (fluxd)
+
+> **🛑 Upgrade Advisory**
+>
+> This documentation is for Flux (v1) which has [reached its end-of-life in November 2022](https://fluxcd.io/blog/2022/10/september-2022-update/#flux-legacy-v1-retirement-plan).
+>
+> We strongly recommend you familiarise yourself with the newest Flux and [migrate as soon as possible](https://fluxcd.io/flux/migration/).
+>
+> For documentation regarding the latest Flux, please refer to [this section](https://fluxcd.io/flux/).
 
 ## Summary
 
@@ -22,18 +30,18 @@ Version controlling of cluster manifests provides reproducibility and a historic
         
 1. Automate vs Deautomate
 
-   Deployment happens automatically when a new image tag is
-   detected. Deautomated deployment will not proceed until
-   manually released (through the CLI tool `fluxctl`).
+    Deployment happens automatically when a new image tag is
+    detected. Deautomated deployment will not proceed until
+    manually released (through the CLI tool `fluxctl`).
 
 2. Lock vs Unlock
 
-   Deployment is pinned to a particular image tag.
-   New deployment will not proceed upon triggered release.
+    Deployment is pinned to a particular image tag.
+    New deployment will not proceed upon triggered release.
 
 ## Setup and configuration
 
-`fluxd` requires setup and offers customization though a multitude of flags.
+`fluxd` requires setup and offers customization through a multitude of flags.
 
 | Flag                                             | Default                            | Purpose
 | ------------------------------------------------ | ---------------------------------- | ---

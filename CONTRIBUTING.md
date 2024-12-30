@@ -18,8 +18,8 @@ the `blocked-needs-validation` label is removed, and the issue can be worked
 on.
 
 To set up Flux to test things, there's documentation about setting up a
-[standalone install](docs/tutorials/get-started.md) and a [Helm
-install](docs/tutorials/get-started-helm.md), which might be helpful.
+[standalone install](https://fluxcd.io/legacy/flux/tutorials/get-started/) and a [Helm
+install](https://fluxcd.io/legacy/flux/tutorials/get-started-helm/), which might be helpful.
 
 Please talk to us on Slack, if you should get stuck anywhere. We appreciate
 any help and look forward to talking to you soon!
@@ -40,9 +40,15 @@ The project uses Slack: To join the conversation, simply join the
 
 The Flux developers use a mailing list to discuss development as well.
 Simply subscribe to [flux-dev on cncf.io](https://lists.cncf.io/g/cncf-flux-dev)
-to join the conversation (this will also add an invitation to your
-Google calendar for our [Flux
-meeting](https://docs.google.com/document/d/1l_M0om0qUEN_NNiGgpqJ2tvsF2iioHkaARDeh6b70B0/edit#)).
+to join the conversation.
+
+### Meetings
+
+Agenda and minutes of previous Flux Dev meetings can be reviewed in this
+[Google doc](https://docs.google.com/document/d/1l_M0om0qUEN_NNiGgpqJ2tvsF2iioHkaARDeh6b70B0/edit#).
+
+Meeting recordings can be viewed in this [Youtube
+playlist](https://www.youtube.com/playlist?list=PLwjBY07V76p5mWNgdINjIiuUiItIeLhIN).
 
 ## Getting Started
 
@@ -73,10 +79,10 @@ This is a rough outline of how to prepare a contribution:
 
 ### How to build and run the project
 
-Refer to the [building doc](docs/contributing/building.md) to find out how to build from
+Refer to the [building doc](https://fluxcd.io/legacy/flux/contributing/building/) to find out how to build from
 source.
 
-Refer to the [Get Started Developing](docs/contributing/get-started-developing.md) guide for a walkthrough on developing Flux locally.
+Refer to the [Get Started Developing](https://fluxcd.io/legacy/flux/contributing/get-started-developing/) guide for a walkthrough on developing Flux locally.
 
 ### How to run the test suite
 

@@ -1,5 +1,79 @@
 # Frequently asked questions
 
+> **🛑 Upgrade Advisory**
+>
+> This documentation is for Flux (v1) which has [reached its end-of-life in November 2022](https://fluxcd.io/blog/2022/10/september-2022-update/#flux-legacy-v1-retirement-plan).
+>
+> We strongly recommend you familiarise yourself with the newest Flux and [migrate as soon as possible](https://fluxcd.io/flux/migration/).
+>
+> For documentation regarding the latest Flux, please refer to [this section](https://fluxcd.io/flux/).
+
+## Migrate to Flux v2
+
+[Flux v1 is in maintenance](https://github.com/fluxcd/flux/issues/3320) on the road to becoming formally superseded by Flux v2. Flux users are all encouraged to [migrate to Flux v2](https://fluxcd.io/flux/migration/flux-v1-migration/) as early as possible.
+
+### Why should I upgrade
+
+Flux v2 includes some breaking changes, which means there is some work required to migrate. We hope that Flux users can all be persuaded to upgrade. There are some great reasons to follow the Flux organization's latest hard work and consider upgrading to Flux v2:
+
+#### Flux v1 runtime behavior doesn't scale well
+
+While there are many Flux v1 users in production, and some of them are running at very large scales, Flux users with smaller operations or those that haven't needed to scale maybe didn't notice that Flux v1 actually doesn't scale very well at all.
+
+Some architectural issues in the original design of Flux weren't practical to resolve, or weren't known, until after implementations could be attempted at scale.
+
+One can debate the design choices made in Flux v1 vs. Flux v2, but it was judged by the maintainers that the design of Flux importantly required some breaking changes to resolve some key architectural issues.
+
+Flux v1 implementation of image automation has serious performance issues scaling into thousands of images. This came to a head when Docker Hub started rate-limiting image pulls, because of the expense of this operation performed casually and at scale.
+
+That's right, rate limiting undoutedly happened because of abusive clients pulling image metadata from many images (like Flux v1 did,) images that might only be stored for the purpose of retention policies, that might be relegated to cold storage if they were not being periodically retrieved.
+
+Flux v2 resolved this with [sortable image tags](https://fluxcd.io/flux/guides/sortable-image-tags/); (this is a breaking change.)
+
+Flux v1 requires one Flux daemon to be running per git repository/branch that syncs to the cluster. Flux v2 only expects cluster operators to run one source-controller instance, allowing to manage multiple repositories, or multiple clusters (or an entire fleet) with just one Flux installation.
+
+Fundamentally, Flux v1 was one single configuration and reconciliation per daemon process, while Flux v2 is designed to handle many configurations for concurrent resources like git repositories, helm charts, helm releases, tenants, clusters, Kustomizations, git providers, alert providers, (... the list continues to grow.)
+
+#### Flux v2 is more reliable and observable
+
+As many advanced Flux v1 users will know, Flux's manifest generation capabilities come at a heavy cost. If manifest generation takes too long, timeout errors in Flux v1 can pre-empt the main loop and prevent the reconciliation of manifests altogether. The effect of this circumstance is a complete Denial-of-Service for changes to any resources managed by Flux v1 — it goes without saying, this is very bad.
+
+Failures in Flux v2 are handled gracefully, with each controller performing separate reconciliations on the resources in their domain. One Kustomization can fail reconciling, or one GitRepository can fail syncing (for whatever reason including its own configurable timeout period), without interrupting the whole Flux system.
+
+An error is captured as a Kubernetes `Event` CRD, and is reflected in the `Status` of the resource that had an error. When there is a fault, the new design allows that other processes should not be impacted by the fault.
+
+#### Flux v2 covers new use cases
+
+There is an idealized use case of GitOps we might explain as: when an update comes, a pull-request is automatically opened and when it gets merged, it is automatically applied to the cluster. That sounds great, but is not really how things work in Flux v1.
+
+In Flux v2, this can actually be used as a real strategy; it is straight-forward to implement and covered by documenation: [Push updates to a different branch](https://fluxcd.io/flux/guides/image-update/#push-updates-to-a-different-branch).
+
+In Flux v1, it was possible to set up incoming webhooks with [flux-recv](https://github.com/fluxcd/flux-recv) as a sidecar to Flux, which while it worked nicely, it isn't nicely integrated and frankly feels bolted-on, sort of like an after-market part. This may be more than appearance, it isn't mentioned at all in Flux v1 docs!
+
+The notification-controller is a core component in the architecture of Flux v2 and the `Receiver` CRD can be used to configure similar functionality with included support for the multi-repository features of Flux.
+
+Similarly, in Flux v1 it was possible to send notifications to outside webhooks like Slack, MS Teams, and GitHub, but only with the help of third-party tools like [justinbarrick/fluxcloud](https://github.com/justinbarrick/fluxcloud). This functionality has also been subsumed as part of notification-controller and the `Alert` CRD can be used to configure outgoing notifications for a growing list of alerting providers today!
+
+#### Flux v2 takes advantage of Kubernetes Extension API
+
+The addition of CRDs to the design of Flux is another great reason to upgrade. Flux v1 had a very limited API which was served from the Flux daemon, usually controlled by using `fluxctl`, which has limited capabilities of inspection, and limited control over the behavior. By using CRDs, Flux v2 can take advantage of the Kubernetes API's extensibility so Flux itself doesn't need to run any daemon which responds directly to API requests.
+
+Operations through Custom Resources (CRDs) provide great new opportunities for observability and eventing as was explained already, and also provides greater reliability through centralization.
+
+Using one centralized, highly-available API service (the Kubernetes API) not only improves reliability, but is a great move for security as well; this decision reduces the risk that when new components are added, growing the functionality of the API, with each step we take we are potentially growing the attack surfaces.
+
+The Kubernetes API is secured by default with TLS certificates for authentication and mandates RBAC configuration for authorization. It's also available in every namespace on the cluster, with a default service account. This is a highly secure API design, and it is plain to see this implementation has many eyes on it.
+
+#### Flux v1 won't be supported forever
+
+The developers of Flux have committed to maintain Flux v1 to support their production user-base for a reasonable span of time.
+
+It's understood that many companies cannot adopt Flux v2 while it remains in prerelease state. So [Flux v1 is in maintenance mode](https://github.com/fluxcd/flux/issues/3320), which will continue at least until a GA release of Flux v2 is announced, and security updates and critical fixes can be made available for at least 6 months following that time.
+
+System administrators often need to plan their migrations far in advance, and these dates won't remain on the horizon forever. It was announced as early as August 2019 that Flux v2 would be backward-incompatible, and that users would eventually be required to upgrade in order to continue to receive support from the maintainers.
+
+Many users of Flux have already migrated production environments to Flux v2. Consider that the sooner this upgrade is undertaken by your organization, the sooner you can get it over with and have put this all behind you.
+
 ## General questions
 
 Also see
@@ -118,7 +192,7 @@ should also provide a readonly SSH key; e.g., on GitHub, leave the
 
 ### Does Flux automatically sync changes back to git?
 
-No. It applies changes to git only when a Flux command or API call makes them.
+No, Flux will not update Git based on changes to the clusters performed through some other means. It applies changes to git only when a Flux command or API call makes them. For example, when [automated image updates](references/automated-image-update.md) are enabled.
 
 ### Will Flux delete resources when I remove them from git?
 
@@ -241,7 +315,7 @@ If you have installed flux through Helm, make sure to pass
 
 As part of using git+ssh securely from the Flux daemon, we make sure
 `StrictHostKeyChecking` is on in the
-[SSH config](http://man7.org/linux/man-pages/man5/ssh_config.5.html). This
+[SSH config](https://man7.org/linux/man-pages/man5/ssh_config.5.html). This
 mitigates against man-in-the-middle attacks.
 
 We bake host keys for `github.com`, `gitlab.com`, `bitbucket.org`, `dev.azure.com`, and `vs-ssh.visualstudio.com`
@@ -258,10 +332,10 @@ There's a couple of reasons this can happen.
 
 The first is that Flux pushes commits to your git repo, and if that
 repo is configured to go through CI, usually those commits will
-trigger a build. You can avoid this by supplying the flag `--ci-skip`
+trigger a build. You can avoid this by supplying the flag `--git-ci-skip`
 so that Flux's commit will append `[ci skip]` to its commit
 messages. Many CI systems will treat that as meaning they should not
-run a build for that commit. You can use `--ci-skip-message`, if you
+run a build for that commit. You can use `--git-ci-skip-message`, if you
 need a different piece of text appended to commit messages.
 
 The other thing that can trigger CI is that Flux pushes a tag to the
@@ -295,31 +369,8 @@ to enumerate the namespaces that Flux attempts to scan for workloads.
 
 ### Can I change the namespace Flux puts things in by default?
 
-Yes. The `fluxd` image has a "kubeconfig" file baked in, which specifies
-a default namespace of `"default"`. That means any manifest not
-specifying a namespace (in `.metadata.namespace`) will be given the
-namespace `"default"` when applied to the cluster.
-
-You can override this by mounting your own "kubeconfig" file into the
-container from a configmap, and using the `KUBECONFIG` environment
-entry to point to it. The [example
-deployment](https://github.com/fluxcd/flux/blob/master/deploy/flux-deployment.yaml) shows how to do this, in
-commented out sections -- it needs extra bits of config in three
-places (the `volume`, `volumeMount`, and `env` entries).
-
-The easiest way to create a suitable "kubeconfig" will be to adapt the
-[file that is baked into the image](https://github.com/fluxcd/flux/blob/master/docker/kubeconfig). Save that
-locally as `my-kubeconfig`, edit it to change the default namespace,
-then create the configmap, in the same namespace you run Flux in, with
-something like:
-
-    kubectl create configmap flux-kubeconfig --from-file=config=./my-kubeconfig
-
-Be aware that the expected location (`$HOME/.kube/`) of the
-`kubeconfig` file is _also_ used by `kubectl` to cache API responses,
-and mounting from a configmap will make it read-only and thus
-effectively disable the caching. For that reason, take care to mount
-your configmap elsewhere in the filesystem, as the example shows.
+Yes. The default namespace can be changed by passing the command-line flag
+`--k8s-default-namespace` to `fluxd`.
 
 ### Can I temporarily make Flux ignore a manifest?
 
@@ -327,7 +378,7 @@ Yes. The easiest way to do that is to use the following annotation in the manife
 the change to git:
 
 ```yaml
-    fluxcd.io/ignore: true
+    fluxcd.io/ignore: "true"
 ```
 
 To stop ignoring these annotated resources, you simply remove the annotation from the manifests in git.

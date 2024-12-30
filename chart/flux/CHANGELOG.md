@@ -1,3 +1,236 @@
+## 1.13.3 (2022-08-30)
+
+### Improvements
+
+ - Updated Flux to `1.25.4`
+   [fluxcd/flux#3641](https://github.com/fluxcd/flux/pull/3641)
+ - Add deprecation warning to NOTES.txt
+   [fluxcd/flux#3638](https://github.com/fluxcd/flux/pull/3638)
+
+## 1.13.2 (2022-07-27)
+
+### Improvements
+
+ - Updated Flux to `1.25.3`
+   [fluxcd/flux#3625](https://github.com/fluxcd/flux/pull/3625)
+
+## 1.13.1 (2022-05-26)
+
+### Improvements
+
+ - Updated Flux to `1.25.2`
+   [fluxcd/flux#3615](https://github.com/fluxcd/flux/pull/3615)
+
+## 1.13.0 (2022-05-05)
+
+### Improvements
+
+ - Updated Flux to `1.25.1`
+   [fluxcd/flux#3607](https://github.com/fluxcd/flux/pull/3607)
+ - Add access to `--git-verify-signatures-mode`
+   [fluxcd/flux#3603](https://github.com/fluxcd/flux/pull/3603)
+
+## 1.12.0 (2022-03-30)
+
+### Improvements
+
+ - Updated Flux to `1.25.0`
+   [fluxcd/flux#3598](https://github.com/fluxcd/flux/pull/3598)
+
+## 1.11.4 (2021-12-08)
+
+### Improvements
+
+ - Updated Flux to `1.24.3`
+   [fluxcd/flux#3572](https://github.com/fluxcd/flux/pull/3572)
+
+## 1.11.3 (2021-11-02)
+
+### Improvements
+
+ - Updated Flux to `1.24.2`
+   [fluxcd/flux#3565](https://github.com/fluxcd/flux/pull/3565)
+ - Update Memcached to `1.6.12`
+   [fluxcd/flux#3566](https://github.com/fluxcd/flux/pull/3566)
+
+## 1.11.2 (2021-09-10)
+
+Single-tenant Flux users reported a regression that affected automated image
+updates in certain configurations from this chart fix, so it is reverted to
+preserve backwards compatibility.
+
+### Fixes
+
+ - Revert [#3482](https://github.com/fluxcd/flux/pull/3482) (undo chart-1.11.0)
+   [fluxcd/flux#3553](https://github.com/fluxcd/flux/pull/3553)
+
+## 1.11.1 (2021-09-09)
+
+### Improvements
+
+ - Updated Flux to `1.24.1`
+   [fluxcd/flux#3551](https://github.com/fluxcd/flux/pull/3551)
+
+## 1.11.0 (2021-08-20)
+
+### Fixes
+
+ - Always honor the allowedNamespaces setting (or absence), for use with
+   dynamically created namespaces
+   [fluxcd/flux#3482](https://github.com/fluxcd/flux/pull/3482)
+
+### Improvements
+
+ - Updated Flux to `1.24.0`
+   [fluxcd/flux#3539](https://github.com/fluxcd/flux/pull/3539)
+
+## 1.10.2 (2021-08-04)
+
+### Improvements
+
+ - Updated Flux to `1.23.2`
+   [fluxcd/flux#3521](https://github.com/fluxcd/flux/pull/3521)
+
+## 1.10.1 (2021-07-23)
+
+### Improvements
+
+ - Updated Flux to `1.23.1`
+   [fluxcd/flux#3509](https://github.com/fluxcd/flux/pull/3509)
+
+## 1.10.0 (2021-06-25)
+
+**Kubernetes Upgrade Required**: Kubernetes `<v1.16` are out of support.
+This release drops beta APIs and adds support for Kubernetes `>=v1.22.0`.
+
+### Improvements
+
+ - Updated Flux to `1.23.0`
+   [fluxcd/flux#3495](https://github.com/fluxcd/flux/pull/3495)
+ - update Role,ClusterRole,..Bindings to v1
+   [fluxcd/flux#3493](https://github.com/fluxcd/flux/pull/3493)
+
+## 1.9.0 (2021-04-23)
+
+### Improvements
+
+ - Updated Flux to `1.22.2`
+   [fluxcd/flux#3473](https://github.com/fluxcd/flux/pull/3473)
+ - Add support for headless service for Flux
+   [fluxcd/flux#3101](https://github.com/fluxcd/flux/pull/3101)
+ - Allow specifying k8s-default-namespace
+   [fluxcd/flux#3131](https://github.com/fluxcd/flux/pull/3131)
+ - Update nodeSelector from beta.kubernetes.io to kubernetes.io
+   [fluxcd/flux#3472](https://github.com/fluxcd/flux/pull/3472)
+
+## 1.8.0 (2021-04-01)
+
+### Improvements
+
+ - Updated Flux to `1.22.1`
+   [fluxcd/flux#3455](https://github.com/fluxcd/flux/pull/3455)
+ - Updated memcached to `1.6.9-alpine`
+   [fluxcd/flux#3459](https://github.com/fluxcd/flux/pull/3459)
+
+## 1.7.0 (2021-03-17)
+
+### Improvements
+
+ - Updated Flux to `1.22.0`
+   [fluxcd/flux#3447](https://github.com/fluxcd/flux/pull/3447)
+
+## 1.6.2 (2021-02-16)
+
+### Improvements
+
+ - Updated Flux to `1.21.2`
+   [fluxcd/flux#3421](https://github.com/fluxcd/flux/pull/3421)
+
+### Fixes
+
+ - Set Rollout strategy type: Recreate
+   [fluxcd/flux#3325](https://github.com/fluxcd/flux/pull/3325)
+
+## 1.6.1 (2021-02-04)
+
+### Improvements
+
+ - Updated Flux to `1.21.1`
+   [fluxcd/flux#3393](https://github.com/fluxcd/flux/pull/3393)
+
+### Fixes
+
+ - Sets namespace on memcached service
+   [fluxcd/flux#3346](https://github.com/fluxcd/flux/pull/3346)
+
+## 1.6.0 (2020-11-20)
+
+### Improvements
+
+ - Updated Flux to `1.21.0`
+   [fluxcd/flux#3314](https://github.com/fluxcd/flux/pull/3314)
+ - Allow envFrom entries in values.yaml
+   [fluxcd/flux#3109](https://github.com/fluxcd/flux/pull/3109)
+
+### Fixes
+
+ - Fix order of hostAliases vs extraContainers
+   [fluxcd/flux#3367](https://github.com/fluxcd/flux/pull/3367)
+
+## 1.5.0 (2020-08-20)
+
+### Improvements
+
+ - Updated Flux to `1.20.2`
+   [fluxcd/flux#3258](https://github.com/fluxcd/flux/pull/3258)
+ - Support configuring a `git.secretDataKey` used as the
+   `--k8s-secret-data-key` argument
+   [fluxcd/flux##3227](https://github.com/fluxcd/flux/pull/3227)
+ - Extend Grafana dashboard options
+   [fluxcd/flux#3183](https://github.com/fluxcd/flux/pull/3183)
+
+## 1.4.1 (2020-08-06)
+
+### Improvements
+
+ - Updated Flux to `1.20.1`
+   [fluxcd/flux#3230](https://github.com/fluxcd/flux/pull/3230)
+ - Add kube.externalConfig option
+   [fluxcd/flux#3208](https://github.com/fluxcd/flux/pull/3208)
+
+## 1.4.0 (2020-07-09)
+
+### Improvements
+
+ - Updated Flux to `1.20.0`
+   [fluxcd/flux#3177](https://github.com/fluxcd/flux/pull/3177)
+ - Add Grafana dashboard
+   [fluxcd/flux#3169](https://github.com/fluxcd/flux/pull/3169)
+ - Support git clone over ssh behind http proxy
+   [fluxcd/flux#3152](https://github.com/fluxcd/flux/pull/3152)
+ - Roll deployment on update known_hosts
+   [fluxcd/flux#3096](https://github.com/fluxcd/flux/pull/3096)
+ - Preserve namespace when running helm template
+   [fluxcd/flux#3076](https://github.com/fluxcd/flux/pull/3076)
+ - Support annotations in chart SSH secret 
+   [fluxcd/flux#3053](https://github.com/fluxcd/flux/pull/3053)
+
+## 1.3.0 (2020-04-03)
+
+### Improvements
+
+ - Updated Flux to `1.19.0`
+   [fluxcd/flux#2961](https://github.com/fluxcd/flux/pull/2961)
+ - Add memcached resource requests
+   [fluxcd/flux#2879](https://github.com/fluxcd/flux/pull/2879)
+ - Add priority class to chart options
+   [fluxcd/flux#2872](https://github.com/fluxcd/flux/pull/2872)
+   [fluxcd/flux#2847](https://github.com/fluxcd/flux/pull/2847)
+ - Add git-secret decryption to chart options 
+   [fluxcd/flux#2870](https://github.com/fluxcd/flux/pull/2870)
+ - Add registry-disable-scanning to chart options 
+   [fluxcd/flux#2828](https://github.com/fluxcd/flux/pull/2828)
+
 ## 1.2.0 (2020-02-06)
 
 ### Improvements

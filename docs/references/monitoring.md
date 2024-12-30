@@ -1,5 +1,13 @@
 # Monitoring Flux
 
+> **🛑 Upgrade Advisory**
+>
+> This documentation is for Flux (v1) which has [reached its end-of-life in November 2022](https://fluxcd.io/blog/2022/10/september-2022-update/#flux-legacy-v1-retirement-plan).
+>
+> We strongly recommend you familiarise yourself with the newest Flux and [migrate as soon as possible](https://fluxcd.io/flux/migration/).
+>
+> For documentation regarding the latest Flux, please refer to [this section](https://fluxcd.io/flux/).
+
 The Flux daemon exposes `/metrics` endpoints which can be scraped for
 monitoring data in Prometheus format; exact metric names and help are
 available from the endpoints themselves.
@@ -17,8 +25,10 @@ The following metrics are exposed:
 | `flux_daemon_sync_manifests`             | Number of manifests being synced to cluster
 | `flux_registry_fetch_duration_seconds`   | Duration of image metadata requests (from cache)
 | `flux_fluxd_connection_duration_seconds` | Duration in seconds of the current connection to fluxsvc
+| `flux_git_ready`                         | Status of the git repository
 
 Flux sync state can be obtained by using the following PromQL expressions:
+
 * `delta(flux_daemon_sync_duration_seconds_count{success='true'}[6m]) < 1` - for general flux sync errors - usually if 
 that is true then there are some problems with infrastructure or there are manifests parse error or there are manifests 
 with duplicate ids.
@@ -26,3 +36,6 @@ with duplicate ids.
 * `flux_daemon_sync_manifests{success='false'} > 0` - for git manifests errors - if true then there are either some 
 problems with applying git manifests to kubernetes - e.g. configmap size is too big to fit in annotations or 
 immutable field (like label selector) was changed. 
+
+* `flux_git_ready < 1` - for git clone/fetch/push errors. If true then there are some problems in the git repository,
+ or the repository cannot be reached.

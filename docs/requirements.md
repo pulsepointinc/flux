@@ -1,5 +1,13 @@
 # Requirements and limitations
 
+> **🛑 Upgrade Advisory**
+>
+> This documentation is for Flux (v1) which has [reached its end-of-life in November 2022](https://fluxcd.io/blog/2022/10/september-2022-update/#flux-legacy-v1-retirement-plan).
+>
+> We strongly recommend you familiarise yourself with the newest Flux and [migrate as soon as possible](https://fluxcd.io/flux/migration/).
+>
+> For documentation regarding the latest Flux, please refer to [this section](https://fluxcd.io/flux/).
+
 Flux has some requirements of the files it finds in your git repo.
 
  * Flux can only deal with one such repo at a time. This limitation is
@@ -8,10 +16,6 @@ Flux has some requirements of the files it finds in your git repo.
  * Flux only deals with YAML files at present. It tries to preserve
    comments and whitespace in YAMLs when updating them. You may see
    updates with incidental, harmless changes, like reindented blocks.
-
- * All Kubernetes resource manifests should explicitly specify the
-   namespace in which you want them to run. Otherwise, the
-   conventional default (`"default"`) will be assumed.
 
  * Flux will ignore directories that look like Helm charts, to avoid
    applying templated YAML manifests. A directory will be skipped if
